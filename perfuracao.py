@@ -76,5 +76,13 @@ class Perfuracao:
         c3 = 1/3 * tempo_pioneiro
         return c1 * math.e**((1 - self.num_poco) * c2) + c3
     
-    def custo_poco(self):
-        return (1/0.7) * (self.custo_completacao() + self.custo_de_perfuracao() * self.comp_perfurado)
+    def custo_poco(self, parcela=0.7):
+        """Custo do total de construção do poço, considerando todas as despesas do CAPEX.
+
+        Args:
+            parcela (float): Percentual referente a soma completação e produção. Defaults to 0.7.
+
+        Returns:
+            float: CAPEX do poço
+        """
+        return (1/parcela) * (self.custo_completacao() + self.custo_de_perfuracao() * self.comp_perfurado)
