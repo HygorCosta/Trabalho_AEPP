@@ -1,12 +1,12 @@
 import os
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 class Producao:
 
-    def __init__(self, dados_producao, dados_trabalho, modelo) -> None:
+    def __init__(self, dados_producao, dados_trabalho, modelo='Base') -> None:
         self.producao = pd.DataFrame()
         self._split_name = os.path.splitext(dados_producao)
         self.df = self.configurar_producao(dados_producao)
@@ -22,24 +22,26 @@ class Producao:
         prod = prod.shift(-1)[:-1]
         prod.date = pd.to_datetime(data_original)
         return prod
+    
+    def __m3_to_bbl(self):
+        return 6.289814 
 
     def producao_anual_em_bbl(self):
-        fator_conv = 6.29
         grupo = pd.Grouper(key='date', axis=0, freq='Y')
-        return fator_conv *self.df.groupby(grupo).sum()
+        return self.__m3_to_bbl() *self.df.groupby(grupo).sum()
     
     def prod_trim_em_mm3(self):
         grupo = pd.Grouper(key='date', axis=0, freq='Q')
         prod_trim = self.df.groupby(grupo).sum() / 1_000
         prod_trim['equiv_oil'] = prod_trim.oil_prod + prod_trim.gas_prod / 1017.5321
-        prod_trim['receita'] = self._calcular_receita_trimestral(prod_trim)
+        prod_trim['receita'] = self._receita_trimestral(prod_trim)
         return prod_trim
     
-    def _calcular_receita_trimestral(self, prod_trim):
+    def _receita_trimestral(self, prod_trim):
         prod_oleo = prod_trim.oil_prod.to_numpy()
         prod_gas = prod_trim.gas_prod.to_numpy()
         price = np.repeat(self.price['Base'].to_numpy(), 4)
-        return price * 6.29 * 1_000 * prod_oleo + (4*37.31)*prod_gas
+        return price * self.__m3_to_bbl() * 1_000 * prod_oleo + (4*37.31)*prod_gas
 
     def write_file(self):
         output_name = self._split_name[0] + '_AEPP' + self._split_name[1]
