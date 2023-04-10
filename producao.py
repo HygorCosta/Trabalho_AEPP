@@ -3,12 +3,13 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from pathlib import Path
 
 class Producao:
 
     def __init__(self, dados_producao, dados_trabalho, modelo='Base') -> None:
         self.producao = pd.DataFrame()
-        self._split_name = os.path.splitext(dados_producao)
+        self._file_name = os.path.splitext(dados_producao)
         self.df = self.configurar_producao(dados_producao)
         self.price = pd.read_excel(dados_trabalho, sheet_name='Stock_Oil_Price', index_col=0, parse_dates=['Ano'], usecols=['Ano', modelo])
         self.prod_anual = self.producao_anual_em_bbl()
@@ -44,7 +45,8 @@ class Producao:
         return price * self.__m3_to_bbl() * 1_000 * prod_oleo + (4*37.31)*prod_gas
 
     def write_file(self):
-        output_name = self._split_name[0] + '_AEPP' + self._split_name[1]
+        Path("resultados/").mkdir(parents=True, exist_ok=True)
+        output_name = 'resultados/' + self._file_name[0] + '_AEPP' + self._file_name[1]
         writer = pd.ExcelWriter(output_name, engine='xlsxwriter')
         self.prod_anual.to_excel(writer, sheet_name='Produção Anual')
         self.prod_trim.to_excel(writer, sheet_name='Produção Trimestral')

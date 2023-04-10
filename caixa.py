@@ -5,17 +5,21 @@ from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from perfuracao import Perfuracao
 from producao import Producao
+from pathlib import Path
 
 class Caixa:
 
     def __init__(self, tarefa, modelo, dados_trabalho, dados_producao) -> None:
        self.tarefa = tarefa
        self.modelo = modelo
-       self.perf = Perfuracao(dados_trabalho, modelo)
+       self.perf = Perfuracao(tarefa, dados_trabalho, modelo)
        self.prod = Producao(dados_producao, dados_trabalho, modelo)
        self.receitas = self.total_revenue()
        self.capex_prod = self.capex_producao()
        self.despesas = self.total_cost()
+
+    def __str__(self):
+        return f'O valor presente liquido do projeto eh de $ {self.vpl():,.2f}.'
 
     def _receita_gas(self, preco_gas=4, fator=37.31):
         m3_to_bbl = 6.289814
@@ -26,8 +30,7 @@ class Caixa:
         rec_oleo = self.prod.prod_anual.oil_prod * self.prod.price[self.modelo]
         return rec_oleo + self._receita_gas()
     
-    @staticmethod
-    def _redutor(aliquota) -> pd.Series:
+    def _redutor(self, aliquota) -> pd.Series:
         redutor = None
         match aliquota:
             case 0:
@@ -42,7 +45,7 @@ class Caixa:
                 redutor = 360/0.35
             case 0.4:
                 redutor = 1181.25
-        return pd.Series(redutor)
+        return pd.Series(redutor, dtype='float64')
     
     def _aliquota(self, prod_trim) -> pd.Series:
         # anos_base = pd.DatetimeIndex(self.perf.pocos.open).year[0]
@@ -79,7 +82,7 @@ class Caixa:
             elif equiv_oil < 1800: aliquota = 0.3
             elif equiv_oil < 2250: aliquota = 0.35
             elif equiv_oil > 2250: aliquota = 0.4
-        return pd.Series(aliquota)
+        return pd.Series(aliquota, dtype='float64')
     
     def aliquota_partipacao_especial(self):
         self.prod.prod_trim['aliquota'] = self.prod.prod_trim.apply(lambda x: self._aliquota(x), axis=1)
@@ -217,19 +220,22 @@ class Caixa:
         impostos = self.net_profit_tax()
         return liq_trib - impostos
     
-    def payment_loan_sac(self, perc_fin=0.8, taxa=6.78/100, nparc=20) -> pd.Series:
+    def payment_loan_sac(self, perc_fin=0.8, taxa=6.78/100, nparc=20):
+        financ = pd.DataFrame(0, columns=['Saldo_Devedor', 'Juros', 'Amortizacao', 'Pagamento'], index=self.__init_cost_series().index)
         self.__perc_fin = 0.8
-        pgto = self.__init_cost_series()
+        pgto = 0
         saldo_dev = perc_fin * self.capex_prod
         amort = saldo_dev / nparc
-        for i in range(0, nparc):
+        for id in financ.index[:nparc]:
             juros = taxa * saldo_dev
-            pgto.iloc[i] = amort + juros
+            pgto = amort + juros
             saldo_dev -= amort
-        return pgto
+            financ.loc[id] = [saldo_dev, juros, amort, pgto]
+        return financ
 
     def capex(self, tma=0.1):
-        capex = self.payment_loan_sac()
+        # capex = self.payment_loan_sac()
+        capex = self.payment_loan_sac()['Pagamento']
         proprio_fv = (1 + tma) * (1 - self.__perc_fin) * self.capex_prod
         capex.iloc[0] += proprio_fv 
         return capex
@@ -243,7 +249,14 @@ class Caixa:
         cash_flow = self.cash_flow().to_frame(name='valor').reset_index()
         return cash_flow.apply(lambda x: self._npv(x.valor, x.date + relativedelta(days=1)), axis=1)
     
-    def npv_projeto(self):
-        return self.discounted_cash_flow().sum()
+    def vpl(self) -> float:
+        return self.discounted_cash_flow().sum().iloc[0]
         
-
+    def write_results(self):
+        Path("resultados/").mkdir(parents=True, exist_ok=True)
+        output_name = 'resultados/' + self.prod._file_name[0] + '_AEPP' + self.prod._file_name[1]
+        writer = pd.ExcelWriter(output_name, engine='xlsxwriter')
+        self.prod.prod_anual.to_excel(writer, sheet_name='Prod_Anual')
+        self.prod.prod_trim.to_excel(writer, sheet_name='Prod_Trimestral_PE')
+        self.payment_loan_sac().to_excel(writer, sheet_name='Financiamento')
+        writer.close()
