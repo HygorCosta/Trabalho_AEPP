@@ -3,6 +3,9 @@
 # Parâmetros de Projeto
 #--------------------------
 capex:
+  ano_lancamento: 2044-01-01 # ano de lancamento do capex no projeto
+  taxa_de_depre: 0.6 #taxa de depreciação
+  anos_depre: 9 # anos de depreciação
   umbilical:
     duto_por_metro: 630 # custo por metro
     acessorios: 50.0e+3 # custo por tramo
@@ -67,7 +70,7 @@ capex:
     vel:
       base: 6000 # metros ao dia
       coleta: 4000 # metros ao dia  (sem considerar os flutuadores) 
-    flut: 1 # hora por flutudador
+    vel_flut: 1 # hora por flutudador
     carga: 3 #dias
     pull_in: 12 #horas
     conexao_tramos: 6 #horas/conexao

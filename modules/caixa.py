@@ -2,18 +2,19 @@ import pandas as pd
 import numpy as np
 import numpy_financial as npf
 from dateutil.relativedelta import relativedelta
-from datetime import datetime
+from datetime import datetime, timedelta
 from .perfuracao import Perfuracao
 from .producao import Producao
-from pathlib import Path
+from .dutos import Dutos
 
 class Caixa:
 
-    def __init__(self, tarefa, modelo, dados_trabalho, dados_producao) -> None:
+    def __init__(self, tarefa: str, modelo, dados_trabalho, dados_producao) -> None:
        self.tarefa = tarefa
        self.modelo = modelo
        self.perf = Perfuracao(tarefa, dados_trabalho, modelo)
        self.prod = Producao(dados_producao, dados_trabalho, modelo)
+       self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
        self.receitas = self.total_revenue()
        self.capex_prod = self.capex_producao()
        self.despesas = self.total_cost()
@@ -165,8 +166,8 @@ class Caixa:
         capex_fpso = fpso / pf + gasoduto
         capex_subsea = subsea / ps + gasoduto
         capex_prod = (capex_pocos + capex_fpso + capex_subsea) / 3
-        match self.tarefa:
-            case 3:
+        match str(self.tarefa):
+            case '3':
                 capex_prod += 170e6
         return float(capex_prod)
     
@@ -186,6 +187,8 @@ class Caixa:
     def descomissionamento(self, taxa=0.2) -> pd.Series:
         descom = self.__init_cost_series()
         descom.iloc[-1] = taxa * self.capex_prod
+        if self.tarefa in ('4A', '4B'):
+            descom.iloc[-1] += self.dutos.descomissionamento()
         return descom
     
     def gross_profit(self):
@@ -194,10 +197,22 @@ class Caixa:
     def lucro_bruto(self):
         return self.receitas - self.despesas.sum(axis=1)
     
+    def _add_depreciacao_p16(self, depreciacao):
+        capex_duto = self.dutos.capex()
+        data_lanc = pd.Timestamp(self.dutos.dados['capex']['ano_lancamento'] - timedelta(days=1))
+        index = depreciacao.index.get_loc(data_lanc)
+        rate = self.dutos.dados['capex']['taxa_de_depre']
+        anos_depre = self.dutos.dados['capex']['anos_depre'] + 1
+        capex_linear = np.linspace(0, rate*capex_duto, anos_depre)
+        depreciacao.iloc[index:index+anos_depre] = capex_linear
+        return depreciacao
+    
     def depreciacao(self, taxa=0.03, duracao=20) -> pd.Series:
         depreciacao = self.__init_cost_series()
         id_prod = self.__get_start_prod_index()
         depreciacao.iloc[id_prod:id_prod+duracao] = taxa * self.capex_prod
+        if self.tarefa in ('4A', '4B'):
+            depreciacao = self._add_depreciacao_p16(depreciacao)
         return depreciacao
     
     def valor_residual(self, taxa=0):
@@ -232,12 +247,19 @@ class Caixa:
             saldo_dev -= amort
             financ.loc[id] = [saldo_dev, juros, amort, pgto]
         return financ
+    
+    def _add_capex_p16(self, capex):
+        capex_duto = self.dutos.capex()
+        data_lanc = pd.Timestamp(self.dutos.dados['capex']['ano_lancamento'] - timedelta(days=1))
+        capex[data_lanc] = capex_duto
+        return capex
 
     def capex(self, tma=0.1):
-        # capex = self.payment_loan_sac()
         capex = self.payment_loan_sac()['Pagamento']
         proprio_fv = (1 + tma) * (1 - self.__perc_fin) * self.capex_prod
-        capex.iloc[0] += proprio_fv 
+        capex.iloc[0] += proprio_fv
+        if self.tarefa in ('4A', '4B'):
+            capex = self._add_capex_p16(capex)
         return capex
     
     def cash_flow(self):
@@ -251,12 +273,7 @@ class Caixa:
     
     def vpl(self) -> float:
         return self.discounted_cash_flow().sum().iloc[0]
+    
+    def tir(self) -> float:
+        return npf.irr(self.cash_flow())
         
-    def write_results(self):
-        Path("resultados/").mkdir(parents=True, exist_ok=True)
-        output_name = 'resultados/' + self.prod._file_name[0] + '_AEPP' + self.prod._file_name[1]
-        writer = pd.ExcelWriter(output_name, engine='xlsxwriter')
-        self.prod.prod_anual.to_excel(writer, sheet_name='Prod_Anual')
-        self.prod.prod_trim.to_excel(writer, sheet_name='Prod_Trimestral_PE')
-        self.payment_loan_sac().to_excel(writer, sheet_name='Financiamento')
-        writer.close()

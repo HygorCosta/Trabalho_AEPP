@@ -35,6 +35,9 @@ class OpexFlexivel:
         equip = self.opex_inspecao_equipamentos()
         interv = self.opex_intervencao()
         return dutos + equip + interv
+    
+    def opex_descomissionamento(self):
+        return self.dados['opex']['descomissionamento']['A']
 
 
 class OpexRigido:
@@ -76,6 +79,9 @@ class OpexRigido:
         interv = self.opex_intervencao()
         inibidores = self.opex_inibidores()
         return dutos + equip + interv + inibidores
+           
+    def opex_descomissionamento(self):
+        return self.dados['opex']['descomissionamento']['B']
         
     
 class InspecEquipamentos:

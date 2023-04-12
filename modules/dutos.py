@@ -15,13 +15,13 @@ class Dutos:
         return dados
 
     def capex(self):
-        if self.tipo == 'A':
+        if self.tipo == '4A':
             umbilical = Umbilical(self.dados).capex()
             gaslift = GasLift(self.dados).capex()
             riser = Riser(self.dados).capex()
             flowline_flexivel = FlowlineFlexivel(self.dados).capex()
             return umbilical + gaslift + riser + flowline_flexivel
-        elif self.tipo == 'B':
+        elif self.tipo == '4B':
             umbilical = Umbilical(self.dados).capex()
             gaslift = GasLift(self.dados).capex()
             riser = Riser(self.dados).capex()
@@ -30,9 +30,17 @@ class Dutos:
             raise ValueError(f'Parâmetro {self.tipo} eh invalido, apenas A para flexivel e B para rigido.')
         
     def opex(self):
-        if self.tipo == 'A':
+        if self.tipo == '4A':
             return OpexFlexivel(self.dados).opex()
-        elif self.tipo == 'B':
+        elif self.tipo == '4B':
             return OpexRigido(self.dados).opex()
+        else:
+            raise ValueError(f'Parâmetro {self.tipo} eh invalido, apenas A para flexivel e B para rigido.')
+        
+    def descomissionamento(self):
+        if self.tipo == '4A':
+            return OpexFlexivel(self.dados).opex_descomissionamento()
+        elif self.tipo == '4B':
+            return OpexRigido(self.dados).opex_descomissionamento()
         else:
             raise ValueError(f'Parâmetro {self.tipo} eh invalido, apenas A para flexivel e B para rigido.')
