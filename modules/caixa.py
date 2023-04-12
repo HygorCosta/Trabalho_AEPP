@@ -3,8 +3,8 @@ import numpy as np
 import numpy_financial as npf
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
-from perfuracao import Perfuracao
-from producao import Producao
+from .perfuracao import Perfuracao
+from .producao import Producao
 from pathlib import Path
 
 class Caixa:

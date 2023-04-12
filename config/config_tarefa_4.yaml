@@ -1,0 +1,141 @@
+---
+#--------------------------
+# Parâmetros de Projeto
+#--------------------------
+capex:
+  umbilical:
+    duto_por_metro: 630 # custo por metro
+    acessorios: 50.0e+3 # custo por tramo
+    obras_uep: 250.0e+3 # despesa direta
+    tramos:
+      flowline:
+        num_tramos: 3
+        comp: 2500 # metros
+      riser:
+        num_tramos: 1
+        comp: 2255 # metros
+
+  gas_lift:
+    duto_por_metro: 750 # custo por metro
+    acessorios: 1.0e+5 # por tramo
+    obras_uep: 80.0e+3 # despesa direta
+    tramos:
+      flowline:
+        num_tramos: 8
+        comp: 1000 #metros
+      riser:
+        num_tramos: 1
+        comp: 1755 #metros
+
+  coleta:
+    riser:
+      duto_por_metro: 2700 # custo por metro
+      acessorios: 1.0e+5 # por tramo
+      obras_uep: 1.0e+5 # despesa direta
+      flut: 40 # flutuadores
+      num_tramos: 3
+      comp: 955 # metros
+    flowline:
+      A: #flexível
+        acessorios: 100.0e+3 # por tramo
+        duto_por_metro: 2700 # custo por metro
+        num_tramos: # lista
+          - 6
+          - 1
+        comp:
+          - 1000 # metros 
+          - 1130 # metros
+        anm: 10.0e+6 # despesa direta
+      B: # rígido
+        duto_por_metro: 250 # custo por metro
+        embarcacao:
+          contratacao: 2.5e+6 # despesa direta
+          diaria: 370.0e+3 # diária da embarcacão
+          servico: 30.0e+3 # por dia
+          vel: 2000 # metros por dia
+        anm: 11.5e+6 # despesa direta
+        plet:
+          custo: 1.2e+6 # por unidade
+          vel: 12 # horas por unidade (Instalacão pela embarcacão J-Lay)
+        jumper:
+          custo: 300.0e+3
+          instalacao: 200.0e+3 # (realizada por barco de apoio)
+
+  pslv:
+    diaria: 250.0e+3
+    servico: 30.0e+3 # por dia
+    vel:
+      base: 6000 # metros ao dia
+      coleta: 4000 # metros ao dia  (sem considerar os flutuadores) 
+    flut: 1 # hora por flutudador
+    carga: 3 #dias
+    pull_in: 12 #horas
+    conexao_tramos: 6 #horas/conexao
+    cvd: 12 #horas
+
+  pidf:
+    v5:
+      diaria: 120.0e+3
+      duracao:
+        base: 5 #dias
+        coleta:
+          riser: 2 #dias
+          flow: 4 #dias
+
+opex:
+  inspecao:
+    pidf:
+      anos_restante: 8 # anos 2053 - 2045
+      # v4 desprezado no projeto
+      v3:
+        diaria: 20.0e+3
+        duracao: 3 # dias
+        periodicidade: 3 # anos
+      v2:
+        diaria: 120.0e+3
+        duracao: 2 # dias
+        periodicidade: 3 # anos
+      v1:
+        diaria: 120.0e+3
+        duracao: 5 # dias
+        periodicidade:
+          flexivel: 5 # anos
+          umbilical: 10 # anos
+    pidr:
+      anos_restante: 7 # anos 2053 - 2046
+      diaria: 120.0e+3
+      duracao: 5 # dias
+      periodicidade: 5 # anos
+      interna:
+        pig: 200.0e+3 # por corrida
+        num_corridas: 2 # por inspecao
+        periodicidade: 5 # anos
+    equipamentos:
+      anm:
+        periodicidade: 3 # anos
+        diaria: 120.0e+3 # RSV
+        duracao: 1 # dia
+      plets: # somente para duto rígido (opcão B)
+        num: 2
+        periodicidade: 3 # anos
+        diaria: 120.0e+3 # RSV
+        duracao: 12 # horas por equipamento
+
+  intervencao:
+    periodicidade: 4 # a cada lwo anos (light workover)
+    duracao: 20 # dias
+    sonda:
+      diaria: 180.0e+3
+      servico: 50.0e+3
+    material: 5.0e+6
+    interrupcao: 50 # dias por intervencao
+
+  inibidores:
+    custo: 25 # por litro
+    vazao: 50 # litros por dia
+
+  descomissionamento:
+    A: 45.0e+6 # flexíveis
+    B: 65.0e+6 # flexíveis
+
+

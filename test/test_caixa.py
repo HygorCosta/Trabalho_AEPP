@@ -1,9 +1,8 @@
-from caixa import Caixa
-import pandas as pd
+from modules.caixa import Caixa
 import pytest
 
 def create_obj():
-    flow = Caixa(3, 'Base', 'dados_trabalho.xlsx', 'Produção_Pituba_Base_LS.xlsx')
+    flow = Caixa(3, 'Base', 'config/dados_trabalho.xlsx', 'Produção_Pituba_Base_LS.xlsx')
     return flow
 
 def test_calcular_receita():
@@ -81,7 +80,7 @@ def test_calcular_imposto_lucro_liquido_tributavel():
 
 def test_calcular_parcelas_sac():
     flow = create_obj()
-    parcela = flow.payment_loan_sac()
+    parcela = flow.payment_loan_sac()['Pagamento']
     assert pytest.approx(parcela.iloc[0]) == 363_643_116.27  
     assert pytest.approx(parcela.iloc[1]) == 353_178_344.08  
     assert pytest.approx(parcela.iloc[-1]) == 0 
