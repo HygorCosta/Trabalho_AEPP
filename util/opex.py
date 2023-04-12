@@ -66,8 +66,8 @@ class OpexRigido:
     
     def opex_inibidores(self):
         num_dias = self.pidr['anos_restante'] * 365
-        custo = self.dados['inibidores']['custo']
-        vazao = self.dados['inibidores']['vazao']
+        custo = self.dados['opex']['inibidores']['custo']
+        vazao = self.dados['opex']['inibidores']['vazao']
         return num_dias * custo * vazao
     
     def opex(self):

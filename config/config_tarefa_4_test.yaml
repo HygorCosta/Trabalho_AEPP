@@ -89,51 +89,51 @@ opex:
       anos_restante: 8 # anos 2053 - 2045
       # v4 desprezado no projeto
       v3:
-        diaria: 20.0e+3
-        duracao: 3 # dias
-        periodicidade: 3 # anos
-      v2:
-        diaria: 120.0e+3
+        diaria: 5
         duracao: 2 # dias
-        periodicidade: 3 # anos
+        periodicidade: 2 # anos
+      v2:
+        diaria: 10
+        duracao: 2 # dias
+        periodicidade: 2 # anos
       v1:
-        diaria: 120.0e+3
+        diaria: 20
         duracao: 5 # dias
         periodicidade:
-          flexivel: 5 # anos
-          umbilical: 10 # anos
+          flexivel: 8 # anos
+          umbilical: 8 # anos
     pidr:
-      anos_restante: 7 # anos 2053 - 2046
-      diaria: 120.0e+3
-      duracao: 5 # dias
+      anos_restante: 6 # anos 2053 - 2046
+      diaria: 1
+      duracao: 2 # dias
       periodicidade: 5 # anos
       interna:
-        pig: 200.0e+3 # por corrida
+        pig: 2 # por corrida
         num_corridas: 2 # por inspecao
         periodicidade: 5 # anos
     equipamentos:
       anm:
-        periodicidade: 3 # anos
-        diaria: 120.0e+3 # RSV
+        periodicidade: 4 # anos
+        diaria: 2 # RSV
         duracao: 1 # dia
       plets: # somente para duto rígido (opcão B)
         num: 2
         periodicidade: 3 # anos
-        diaria: 120.0e+3 # RSV
+        diaria: 1 # RSV
         duracao: 12 # horas por equipamento
 
   intervencao:
     periodicidade: 4 # a cada lwo anos (light workover)
-    duracao: 20 # dias
+    duracao: 2 # dias
     sonda:
-      diaria: 180.0e+3
-      servico: 50.0e+3
-    material: 5.0e+6
+      diaria: 1
+      servico: 1
+    material: 5
     interrupcao: 50 # dias por intervencao
 
   inibidores:
-    custo: 25 # por litro
-    vazao: 50 # litros por dia
+    custo: 2 # por litro
+    vazao: 1 # litros por dia
 
   descomissionamento:
     A: 45.0e+6 # flexíveis
