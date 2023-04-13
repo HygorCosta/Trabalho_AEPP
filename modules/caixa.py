@@ -268,8 +268,11 @@ class Caixa:
         return liquido + depreciacao - self.capex()
 
     def discounted_cash_flow(self):
-        cash_flow = self.cash_flow().to_frame(name='valor').reset_index()
-        return cash_flow.apply(lambda x: self._npv(x.valor, x.date + relativedelta(days=1)), axis=1)
+        cash_flow = self.cash_flow().rename('valor').reset_index()
+        disc_cf = cash_flow.apply(lambda x: self._npv(x.valor, x.date + relativedelta(days=1)), axis=1)
+        disc_cf.index = self.__init_cost_series().index
+        disc_cf.columns = ['cash_flow_disc']
+        return disc_cf
     
     def vpl(self) -> float:
         return self.discounted_cash_flow().sum().iloc[0]
