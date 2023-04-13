@@ -113,4 +113,9 @@ def test_calcular_discounted_cash_flow():
 def test_npv():
     flow = create_obj()
     parcela = flow.vpl()
-    assert pytest.approx(parcela) == 892_060_950.03   
+    assert pytest.approx(parcela) == 892_060_950.03
+
+def test_tgr():
+    flow = create_obj()
+    parcela = flow.tgr()
+    assert pytest.approx(parcela) == 0.1101712

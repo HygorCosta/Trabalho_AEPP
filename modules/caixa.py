@@ -14,10 +14,13 @@ class Caixa:
        self.modelo = modelo
        self.perf = Perfuracao(tarefa, dados_trabalho, modelo)
        self.prod = Producao(dados_producao, dados_trabalho, modelo)
-       self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
+       if tarefa in ('4A', '4B'):
+        self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
        self.receitas = self.total_revenue()
        self.capex_prod = self.capex_producao()
        self.despesas = self.total_cost()
+       self.tma = 0.1
+           
 
     def __str__(self):
         return f'O valor presente liquido do projeto eh de $ {self.vpl():,.2f}.'
@@ -279,4 +282,44 @@ class Caixa:
     
     def tir(self) -> float:
         return npf.irr(self.cash_flow())
+    
+    def _valor_futuro(self, valor, nint):
+        return pd.Series(valor * (1 + self.tma)**nint)
+    
+    def _global_dispendios(self):
+        cf = self.cash_flow().rename('valor').reset_index()['valor']
+        cf[cf > 0] = 0
+        return -npf.npv(self.tma, cf.to_numpy())
+    
+    def _global_receitas(self):
+        cf = self.cash_flow().rename('valor').reset_index()['valor']
+        cf[cf < 0] = 0
+        return cf.apply(lambda x: npf.fv(self.tma, len(cf) - 1 - cf.loc[cf == x].index[0], 0, -x)).sum()
+    
+    def tgr(self) -> float:
+        f = self._global_receitas()
+        i = self._global_dispendios()
+        n = len(self.cash_flow())
+        return (f/i)**(1/n) - 1
+
+    def il(self):
+        pass
+
+    def roi(self):
+        pass
+
+    def lu(self):
+        pass
+
+    def cup(self):
+        pass
+
+    def cui(self):
+        pass
+
+    def cuo(self):
+        pass
+
+    def cut(self):
+        pass
         

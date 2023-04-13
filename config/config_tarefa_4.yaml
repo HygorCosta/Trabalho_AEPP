@@ -6,6 +6,7 @@ capex:
   ano_lancamento: 2044-01-01 # ano de lancamento do capex no projeto
   taxa_de_depre: 0.6 #taxa de depreciação
   anos_depre: 9 # anos de depreciação
+
   umbilical:
     duto_por_metro: 630 # custo por metro
     acessorios: 50.0e+3 # custo por tramo
@@ -20,7 +21,7 @@ capex:
 
   gas_lift:
     duto_por_metro: 750 # custo por metro
-    acessorios: 1.0e+5 # por tramo
+    acessorios: 100.0e+3 # por tramo
     obras_uep: 80.0e+3 # despesa direta
     tramos:
       flowline:
@@ -40,8 +41,8 @@ capex:
       comp: 955 # metros
     flowline:
       A: #flexível
-        acessorios: 100.0e+3 # por tramo
         duto_por_metro: 2700 # custo por metro
+        acessorios: 100.0e+3 # por tramo
         num_tramos: # lista
           - 6
           - 1
@@ -68,8 +69,8 @@ capex:
     diaria: 250.0e+3
     servico: 30.0e+3 # por dia
     vel:
-      base: 6000 # metros ao dia
-      coleta: 4000 # metros ao dia  (sem considerar os flutuadores) 
+      base: 6.0e+3 # metros ao dia
+      coleta: 4.0e+3  # metros ao dia  (sem considerar os flutuadores) 
     vel_flut: 1 # hora por flutudador
     carga: 3 #dias
     pull_in: 12 #horas
