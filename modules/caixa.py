@@ -24,7 +24,7 @@ class Caixa:
             self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
         self.capex_prod = self.capex_producao()
         self.part_esp = PartipacaoEspecial(
-            self.prod, self.perf, self.capex_prod)
+            self.prod, self.perf, self.capex_prod, self.capex())
         self.receitas = self.total_revenue()
         self.despesas = self.total_cost()
         self.tma = 0.1

@@ -12,7 +12,8 @@ class Producao:
 
     def __init__(self, dados_producao, modelo='Base', dados_trabalho='config/dados_trabalho.xlsx') -> None:
         self.producao = pd.DataFrame()
-        self._file_name = os.path.splitext(dados_producao)
+        self._file_name = os.path.basename(dados_producao)
+        self._file_name = os.path.splitext(self._file_name)
         self.df = self.configurar_producao(dados_producao)
         self.price = pd.read_excel(dados_trabalho, sheet_name='Stock_Oil_Price', index_col=0, parse_dates=[
                                    'Ano'], usecols=['Ano', modelo])

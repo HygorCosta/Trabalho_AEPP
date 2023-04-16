@@ -22,7 +22,7 @@ class Results:
         return pd.concat(data_frames, join='outer', axis=1)
     
     def write_results(self):
-        Path("out/").mkdir(parents=True, exist_ok=True)
+        Path("out\\").mkdir(parents=True, exist_ok=True)
         output_name = 'out/' + self.projeto.prod._file_name[0] + '_AEPP' + self.projeto.prod._file_name[1]
         writer = pd.ExcelWriter(output_name, engine='xlsxwriter')
         self.projeto.prod.prod_anual.to_excel(writer, sheet_name='Prod_Anual')

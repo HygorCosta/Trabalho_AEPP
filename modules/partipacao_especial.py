@@ -8,10 +8,11 @@ from dateutil.relativedelta import relativedelta
 
 class PartipacaoEspecial:
 
-    def __init__(self, prod: Producao, perf: Perfuracao, capex_prod) -> None:
+    def __init__(self, prod: Producao, perf: Perfuracao, capex_prod, capex) -> None:
         self.tarefa = perf.tarefa
         self.prod_trim = prod.prod_trim
         self.capex_prod = capex_prod
+        self.capex = capex
         self.pocos = perf.pocos
         self.price = prod.price[perf.modelo].repeat(4)
         self.price.index = self.prod_trim.index
@@ -19,8 +20,7 @@ class PartipacaoEspecial:
         self.despesas = self.total_cost().sum(axis=1)
         if self.tarefa in ('4A', '4B'):
             self.dutos = Dutos('config/config_tarefa_4.yaml', self.tarefa)
-        self.prod_trim['receita_liq'] = self.net_income_before_tax()
-        self.prod_trim.receita_liq[self.prod_trim.receita_liq < 0] = 0
+        self.prod_trim['receita_liq'] = self.lucro_liquido_pe()
         self.calcular_partipacao_especial()
         self.values = self._group_by_year(self.prod_trim.part_esp)
 
@@ -98,6 +98,13 @@ class PartipacaoEspecial:
     
     def net_income_before_tax(self) -> pd.Series:
         return self.lucro_bruto() - self.depreciacao()
+    
+    def lucro_liquido_pe(self):
+        lucro = self.lucro_bruto()
+        depreciacao = self.depreciacao()
+        capex = self.capex.repeat(4) / 4
+        capex.index = lucro.index
+        return  lucro - depreciacao - capex
     
     def net_profit_tax(self, ir=0.25, csll=0.09) -> pd.Series:
         lucro_liq_trib = self.net_income_before_tax()
