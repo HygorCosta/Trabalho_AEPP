@@ -2,6 +2,7 @@ import os
 import math
 import numpy as np
 import pandas as pd
+import calendar
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 
 class Producao:
 
-    def __init__(self, dados_producao, dados_trabalho, modelo='Base') -> None:
+    def __init__(self, dados_producao, modelo='Base', dados_trabalho='config/dados_trabalho.xlsx') -> None:
         self.producao = pd.DataFrame()
         self._file_name = os.path.splitext(dados_producao)
         self.df = self.configurar_producao(dados_producao)
@@ -35,11 +36,11 @@ class Producao:
         grupo = pd.Grouper(key='date', axis=0, freq='Y')
         return self.__m3_to_bbl() * self.df.groupby(grupo).sum()
 
-    def prod_trim_em_mm3(self):
+    def prod_trim_em_mm3(self, fator_gas = 1017.532078):
         grupo = pd.Grouper(key='date', axis=0, freq='Q')
         prod_trim = self.df.groupby(grupo).sum() / 1_000
         prod_trim['equiv_oil'] = prod_trim.oil_prod + \
-            prod_trim.gas_prod / 1017.5321
+            prod_trim.gas_prod / fator_gas
         return prod_trim
 
     def write_file(self):
@@ -54,11 +55,11 @@ class Producao:
 
 class ProducaoTarefa01:
 
-    def __init__(self, dados_trabalho) -> None:
+    def __init__(self, dados_trabalho='config/dados_trabalho.xlsx') -> None:
         self.modelo = 'Up'
         self.producao = pd.DataFrame()
-        self.price = pd.read_excel(dados_trabalho, sheet_name='Stock_Oil_Price',
-                                   index_col=0, parse_dates=['Ano'], usecols=['Ano'])
+        self.price = pd.read_excel(dados_trabalho,
+                                   sheet_name='Stock_Oil_Price', index_col=0, parse_dates=['Ano'], usecols=['Ano'])
         self.price[self.modelo] = 70
         self._prod_tarefa_01_anual()
         self._prod_year_to_quarter()
@@ -111,18 +112,26 @@ class ProducaoTarefa01:
             date_prod.append(start_date + relativedelta(years=i))
         return date_prod
 
-    def _prod_year_to_quarter(self):
+    def _prod_year_to_quarter(self, fator_gas=1017.532078):
         self.prod_trim = self.prod_anual.loc[self.prod_anual.index.repeat(4)]
         self.prod_trim.index = self._quarter_index()
         self.prod_trim = self.prod_trim / (4 * 6.29 * 1000)
         self.prod_trim['equiv_oil'] = self.prod_trim.oil_prod + \
-            self.prod_trim.gas_prod / 1017.5321
+            self.prod_trim.gas_prod / fator_gas
+        
+    def _day_prod_to_anual(self, prod):
+        if calendar.isleap(prod.name.year):
+            prod = prod.mul(366)
+        else:
+            prod = prod.mul(365)
+        return prod
 
     def _prod_tarefa_01_anual(self, RGO=100):
         self.prod_anual = pd.DataFrame(index=self._year_index())
         self.prod_anual.index = self.prod_anual.index.astype('datetime64[ns]')
         self.prod_anual.astype({})
-        self.prod_anual['oil_prod'] = self._prod_oil_t1() * 365
-        self.prod_anual['water_prod'] = self._prod_water_t1() * 365
-        self.prod_anual['water_inj'] = self._inj_water_t1() * 365
+        self.prod_anual['oil_prod'] = self._prod_oil_t1()
+        self.prod_anual['water_prod'] = self._prod_water_t1()
+        self.prod_anual['water_inj'] = self._inj_water_t1()
         self.prod_anual['gas_prod'] = RGO * self.prod_anual.oil_prod
+        self.prod_anual = self.prod_anual.apply(lambda row: self._day_prod_to_anual(row), axis=1)

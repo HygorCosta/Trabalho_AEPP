@@ -12,30 +12,31 @@ from .partipacao_especial import PartipacaoEspecial
 
 class Caixa:
 
-    def __init__(self, tarefa: str, dados_producao=None, modelo='Base', dados_trabalho='config/dados_trabalho.xlsx') -> None:
+    def __init__(self, tarefa: str, modelo='Base', dados_producao=None):
         self.tarefa = tarefa
         self.modelo = modelo
-        self.perf = Perfuracao(tarefa, dados_trabalho, modelo)
+        self.perf = Perfuracao(tarefa, modelo)
         if tarefa == '1':
-            self.prod = ProducaoTarefa01(dados_trabalho)
+            self.prod = ProducaoTarefa01()
         else:
-            self.prod = Producao(dados_producao, dados_trabalho, modelo)
+            self.prod = Producao(dados_producao, modelo)
         if tarefa in ('4A', '4B'):
             self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
-        self.receitas = self.total_revenue()
         self.capex_prod = self.capex_producao()
-        self.part_esp = PartipacaoEspecial(self.prod, self.perf, self.capex_prod)
+        self.part_esp = PartipacaoEspecial(
+            self.prod, self.perf, self.capex_prod)
+        self.receitas = self.total_revenue()
         self.despesas = self.total_cost()
         self.tma = 0.1
         self.price_vpl_null = None
-        self.original = [self.total_revenue(
+        self.__original = [self.total_revenue(
         ), self.capex_producao(), self.total_cost()]
 
     def __str__(self):
         return f'O VPL do projeto eh de $ {self.vpl():,.2f}.'
 
     def _restore_original(self):
-        self.receitas, self.capex_prod, self.despesas = self.original
+        self.receitas, self.capex_prod, self.despesas = self.__original
         self.price_vpl_null = None
 
     def _receita_gas(self, preco_gas=4, fator=37.31):
