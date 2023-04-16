@@ -3,8 +3,18 @@ import pandas as pd
 from modules.caixa import Caixa
 from modules.results import Results
 
-# Tarefas:
-# 2, 3, 4A e 4B (str)
-projeto = Caixa(tarefa='4A', modelo='Base', dados_trabalho='config/dados_trabalho.xlsx', dados_producao='Produção_Pituba_Base_P16.xlsx')
-resultados = Results(projeto)
-resultados.write_results()
+# Tarefas 01:
+tarefa_01 = Caixa(tarefa='1', modelo='Up')
+
+# Tarefas 02:
+tarefa_02_down = Caixa(tarefa='2', dados_producao='producao/Pituba_Down_Mensal.xlsx')
+tarefa_02_base = Caixa(tarefa='2', dados_producao='producao/Pituba_Base_Mensal.xlsx')
+tarefa_02_up = Caixa(tarefa='2', dados_producao='producao/Pituba_Up_Mensal.xlsx')
+
+# TODO: Add: calcular o VPL médio dos três casos da tarefa 02
+
+# Tarefa 03:
+tarefa_03 = Caixa(tarefa='3', dados_producao='producao/Pituba_Base_LS.xlsx')
+
+# Tarefa 04:
+# TODO - Add: incluir os dois cenários (A e B)
