@@ -3,27 +3,40 @@ import numpy as np
 import numpy_financial as npf
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
+from scipy.optimize import root
 from .perfuracao import Perfuracao
-from .producao import Producao
+from .producao import Producao, ProducaoTarefa01
 from .dutos import Dutos
+from .partipacao_especial import PartipacaoEspecial
+
 
 class Caixa:
 
-    def __init__(self, tarefa: str, modelo, dados_trabalho, dados_producao) -> None:
-       self.tarefa = tarefa
-       self.modelo = modelo
-       self.perf = Perfuracao(tarefa, dados_trabalho, modelo)
-       self.prod = Producao(dados_producao, dados_trabalho, modelo)
-       if tarefa in ('4A', '4B'):
-        self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
-       self.receitas = self.total_revenue()
-       self.capex_prod = self.capex_producao()
-       self.despesas = self.total_cost()
-       self.tma = 0.1
-           
+    def __init__(self, tarefa: str, dados_producao=None, modelo='Base', dados_trabalho='config/dados_trabalho.xlsx') -> None:
+        self.tarefa = tarefa
+        self.modelo = modelo
+        self.perf = Perfuracao(tarefa, dados_trabalho, modelo)
+        if tarefa == '1':
+            self.prod = ProducaoTarefa01(dados_trabalho)
+        else:
+            self.prod = Producao(dados_producao, dados_trabalho, modelo)
+        if tarefa in ('4A', '4B'):
+            self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
+        self.receitas = self.total_revenue()
+        self.capex_prod = self.capex_producao()
+        self.part_esp = PartipacaoEspecial(self.prod, self.perf, self.capex_prod)
+        self.despesas = self.total_cost()
+        self.tma = 0.1
+        self.price_vpl_null = None
+        self.original = [self.total_revenue(
+        ), self.capex_producao(), self.total_cost()]
 
     def __str__(self):
-        return f'O valor presente liquido do projeto eh de $ {self.vpl():,.2f}.'
+        return f'O VPL do projeto eh de $ {self.vpl():,.2f}.'
+
+    def _restore_original(self):
+        self.receitas, self.capex_prod, self.despesas = self.original
+        self.price_vpl_null = None
 
     def _receita_gas(self, preco_gas=4, fator=37.31):
         m3_to_bbl = 6.289814
@@ -33,80 +46,11 @@ class Caixa:
         self.prod.price.index = self.prod.prod_anual.index
         rec_oleo = self.prod.prod_anual.oil_prod * self.prod.price[self.modelo]
         return rec_oleo + self._receita_gas()
-    
-    def _redutor(self, aliquota) -> pd.Series:
-        redutor = None
-        match aliquota:
-            case 0:
-                redutor = 0
-            case 0.1:
-                redutor = 450
-            case 0.2:
-                redutor = 675
-            case 0.3:
-                redutor = 900
-            case 0.35:
-                redutor = 360/0.35
-            case 0.4:
-                redutor = 1181.25
-        return pd.Series(redutor, dtype='float64')
-    
-    def _aliquota(self, prod_trim) -> pd.Series:
-        # anos_base = pd.DatetimeIndex(self.perf.pocos.open).year[0]
-        anos_base = self.perf.pocos.open[0].year
-        aliquota = None
-        red = None
-        ano = prod_trim.name.year
-        equiv_oil = prod_trim.equiv_oil
-        if ano == anos_base:
-            if equiv_oil < 1350: aliquota = 0
-            elif equiv_oil < 1800: aliquota = 0.1
-            elif equiv_oil < 2250: aliquota = 0.2
-            elif equiv_oil < 2700: aliquota = 0.3
-            elif equiv_oil < 3150: aliquota = 0.35
-            elif equiv_oil > 3150: aliquota = 0.4
-        if ano == anos_base + 1:
-            if equiv_oil < 1050: aliquota = 0
-            elif equiv_oil < 1500: aliquota = 0.1
-            elif equiv_oil < 1950: aliquota = 0.2
-            elif equiv_oil < 2400: aliquota = 0.3
-            elif equiv_oil < 2850: aliquota = 0.35
-            elif equiv_oil > 2850: aliquota = 0.4
-        if ano == anos_base + 2:
-            if equiv_oil < 750: aliquota = 0
-            elif equiv_oil < 1200: aliquota = 0.1
-            elif equiv_oil < 1650: aliquota = 0.2
-            elif equiv_oil < 2100: aliquota = 0.3
-            elif equiv_oil < 2550: aliquota = 0.35
-            elif equiv_oil > 2550: aliquota = 0.4
-        if ano >= anos_base + 3:
-            if equiv_oil < 450: aliquota = 0
-            elif equiv_oil < 900: aliquota = 0.1
-            elif equiv_oil < 1350: aliquota = 0.2
-            elif equiv_oil < 1800: aliquota = 0.3
-            elif equiv_oil < 2250: aliquota = 0.35
-            elif equiv_oil > 2250: aliquota = 0.4
-        return pd.Series(aliquota, dtype='float64')
-    
-    def aliquota_partipacao_especial(self):
-        self.prod.prod_trim['aliquota'] = self.prod.prod_trim.apply(lambda x: self._aliquota(x), axis=1)
-    
-    def _redutor_part_esp(self):
-        redutor = self.prod.prod_trim.apply(lambda x: self._redutor(x.aliquota), axis=1)
-        self.prod.prod_trim['redutor'] = redutor
-    
-    def partipacao_especial(self):
-        self.aliquota_partipacao_especial()
-        self._redutor_part_esp()
-        ptrim = self.prod.prod_trim
-        bruto = ptrim.receita * ptrim.aliquota
-        desconto = (ptrim.redutor / ptrim.equiv_oil).fillna(0)
-        self.prod.prod_trim['part_esp'] = bruto * (1 - desconto)
 
     def total_cost(self) -> pd.DataFrame:
         despesas = self.cost_of_goods_sold()
         return despesas.join(self.fix_cost())
-    
+
     def fix_cost(self) -> pd.DataFrame:
         despesas = pd.DataFrame()
         despesas['opex_fixo'] = self.opex_fixo()
@@ -120,33 +64,31 @@ class Caixa:
         return despesas
 
     def imposto_producao(self, roy=0.1, pasep=0.0925) -> pd.Series:
-        self.partipacao_especial()
-        taxa = roy + pasep
-        imp_direto = taxa * self.receitas
-        grupo = pd.Grouper(axis=0, freq='Y')
-        part_esp = self.prod.prod_trim.part_esp.groupby(grupo).sum()
-        return imp_direto + part_esp
-    
+        imp_direto = (roy + pasep) * self.receitas
+        return imp_direto + self.part_esp.values
+
     @staticmethod
     def __diff_month(d1, d2):
         return (d1.year - d2.year) * 12 + d1.month - d2.month
-    
+
     def opex_variavel(self, co=3, cwi=2, cwp=2, cg=2) -> pd.Series:
-        oleo =  co * self.prod.prod_anual.oil_prod
-        winj =  cwi * self.prod.prod_anual.water_inj
-        wprod =  cwi * self.prod.prod_anual.water_prod
-        gas =  cg * self.prod.prod_anual.gas_prod / 1017.5321
+        oleo = co * self.prod.prod_anual.oil_prod
+        winj = cwi * self.prod.prod_anual.water_inj
+        wprod = cwi * self.prod.prod_anual.water_prod
+        gas = cg * self.prod.prod_anual.gas_prod / 1017.5321
         return oleo + winj + wprod + gas
-    
+
     def _npv(self, vf, data_despesa, tma=0.1, period='Y'):
-        comercialidade = datetime.strptime(str(self.perf.comercialidade), r'%Y-%m-%d %H:%M:%S')
+        comercialidade = datetime.strptime(
+            str(self.perf.comercialidade), r'%Y-%m-%d %H:%M:%S')
         data = datetime.strptime(str(data_despesa), r'%Y-%m-%d %H:%M:%S')
         if period == 'Y':
             time_step = data.year - comercialidade.year
         elif period == 'd':
             time_step = (data - comercialidade).days
         elif period == 'M':
-            time_step = self.__diff_month(data_despesa, self.perf.comercialidade)
+            time_step = self.__diff_month(
+                data_despesa, self.perf.comercialidade)
         else:
             raise TypeError("Período inválido.")
         vp = vf / (1 + tma)**time_step
@@ -154,13 +96,13 @@ class Caixa:
 
     def capex_pocos(self):
         return self.perf.pocos.apply(lambda x: self._npv(x.custo, x.open, tma=0.0261158/100, period='d'), axis=1).sum()
-    
+
     def capex_subsea(self, a=-67.871986, b=127.33084, c=0.7):
-        return (a + b * self.perf.num_pocos**c) * 10**6
-    
+        return (a + b * self.perf.pocos.shape[0]**c) * 10**6
+
     def capex_fpso(self, capacidade=100, a=-7878.421023, b=5426.536367, c=0.1):
         return (a + b * capacidade**c) * 10**6
-    
+
     def capex_producao(self, gasoduto=70e6, pr=0.2, ps=0.3, pf=0.15) -> float:
         subsea = self.capex_subsea()
         fpso = self.capex_fpso()
@@ -173,11 +115,11 @@ class Caixa:
             case '3':
                 capex_prod += 170e6
         return float(capex_prod)
-    
+
     def __get_start_prod_index(self):
         index = pd.Index(pd.DatetimeIndex(self.prod.price.index).year)
         return index.get_loc(self.perf.pocos.open[0].year)
-    
+
     def __init_cost_series(self):
         return pd.Series(np.zeros(len(self.prod.price.index)), index=self.prod.price.index)
 
@@ -186,30 +128,31 @@ class Caixa:
         id_prod = self.__get_start_prod_index()
         opex_fixo.iloc[id_prod:] = taxa * self.capex_prod
         return opex_fixo.replace()
-    
+
     def descomissionamento(self, taxa=0.2) -> pd.Series:
         descom = self.__init_cost_series()
         descom.iloc[-1] = taxa * self.capex_prod
         if self.tarefa in ('4A', '4B'):
             descom.iloc[-1] += self.dutos.descomissionamento()
         return descom
-    
+
     def gross_profit(self):
         return self.receitas.sum() - self.cost_of_goods_sold().sum()
-    
+
     def lucro_bruto(self):
         return self.receitas - self.despesas.sum(axis=1)
-    
+
     def _add_depreciacao_p16(self, depreciacao):
         capex_duto = self.dutos.capex()
-        data_lanc = pd.Timestamp(self.dutos.dados['capex']['ano_lancamento'] - timedelta(days=1))
+        data_lanc = pd.Timestamp(
+            self.dutos.dados['capex']['ano_lancamento'] - timedelta(days=1))
         index = depreciacao.index.get_loc(data_lanc)
         rate = self.dutos.dados['capex']['taxa_de_depre']
         anos_depre = self.dutos.dados['capex']['anos_depre'] + 1
         capex_linear = np.linspace(0, rate*capex_duto, anos_depre)
         depreciacao.iloc[index:index+anos_depre] = capex_linear
         return depreciacao
-    
+
     def depreciacao(self, taxa=0.03, duracao=20) -> pd.Series:
         depreciacao = self.__init_cost_series()
         id_prod = self.__get_start_prod_index()
@@ -217,18 +160,18 @@ class Caixa:
         if self.tarefa in ('4A', '4B'):
             depreciacao = self._add_depreciacao_p16(depreciacao)
         return depreciacao
-    
+
     def valor_residual(self, taxa=0):
         capex_prod = self.__init_cost_series() + self.capex_prod
         return taxa * capex_prod
-    
+
     def net_income_before_tax(self) -> pd.Series:
         residual = self.valor_residual()
         bruto = self.lucro_bruto()
         depreciacao = self.depreciacao()
         return bruto - depreciacao + residual
 
-    def net_profit_tax(self, ir= 0.25, csll=0.09)  -> pd.Series:
+    def net_profit_tax(self, ir=0.25, csll=0.09) -> pd.Series:
         lucro_liq_trib = self.net_income_before_tax()
         lucro_liq_trib[lucro_liq_trib < 0] = 0
         return (ir + csll) * lucro_liq_trib
@@ -237,9 +180,10 @@ class Caixa:
         liq_trib = self.net_income_before_tax()
         impostos = self.net_profit_tax()
         return liq_trib - impostos
-    
+
     def payment_loan_sac(self, perc_fin=0.8, taxa=6.78/100, nparc=20):
-        financ = pd.DataFrame(0, columns=['Saldo_Devedor', 'Juros', 'Amortizacao', 'Pagamento'], index=self.__init_cost_series().index)
+        financ = pd.DataFrame(0, columns=[
+                              'Saldo_Devedor', 'Juros', 'Amortizacao', 'Pagamento'], index=self.__init_cost_series().index)
         self.__perc_fin = 0.8
         pgto = 0
         saldo_dev = perc_fin * self.capex_prod
@@ -250,10 +194,11 @@ class Caixa:
             saldo_dev -= amort
             financ.loc[id] = [saldo_dev, juros, amort, pgto]
         return financ
-    
+
     def _add_capex_p16(self, capex):
         capex_duto = self.dutos.capex()
-        data_lanc = pd.Timestamp(self.dutos.dados['capex']['ano_lancamento'] - timedelta(days=1))
+        data_lanc = pd.Timestamp(
+            self.dutos.dados['capex']['ano_lancamento'] - timedelta(days=1))
         capex[data_lanc] = capex_duto
         return capex
 
@@ -264,62 +209,117 @@ class Caixa:
         if self.tarefa in ('4A', '4B'):
             capex = self._add_capex_p16(capex)
         return capex
-    
+
     def cash_flow(self):
         liquido = self.net_income_after_tax()
         depreciacao = self.depreciacao()
         return liquido + depreciacao - self.capex()
 
     def discounted_cash_flow(self):
-        cash_flow = self.cash_flow().rename('valor').reset_index()
-        disc_cf = cash_flow.apply(lambda x: self._npv(x.valor, x.date + relativedelta(days=1)), axis=1)
+        cash_flow = self.cash_flow().reset_index()
+        cash_flow.columns = ['date', 'parcelas']
+        disc_cf = cash_flow.apply(lambda x: self._npv(
+            x.parcelas, x.date + relativedelta(days=1)), axis=1)
         disc_cf.index = self.__init_cost_series().index
         disc_cf.columns = ['cash_flow_disc']
         return disc_cf
-    
+
     def vpl(self) -> float:
-        return self.discounted_cash_flow().sum().iloc[0]
-    
+        return float(self.discounted_cash_flow().sum().iloc[0])
+
     def tir(self) -> float:
         return npf.irr(self.cash_flow())
-    
+
     def _valor_futuro(self, valor, nint):
         return pd.Series(valor * (1 + self.tma)**nint)
-    
-    def _global_dispendios(self):
+
+    def _global_dispendios_presente(self):
         cf = self.cash_flow().rename('valor').reset_index()['valor']
         cf[cf > 0] = 0
         return -npf.npv(self.tma, cf.to_numpy())
-    
-    def _global_receitas(self):
+
+    def _global_receitas_futuro(self):
         cf = self.cash_flow().rename('valor').reset_index()['valor']
         cf[cf < 0] = 0
         return cf.apply(lambda x: npf.fv(self.tma, len(cf) - 1 - cf.loc[cf == x].index[0], 0, -x)).sum()
-    
+
+    def _global_receitas_presente(self):
+        cf = self.cash_flow().rename('valor').reset_index()['valor']
+        cf[cf < 0] = 0
+        return npf.npv(self.tma, cf.to_numpy())
+
     def tgr(self) -> float:
-        f = self._global_receitas()
-        i = self._global_dispendios()
+        f = self._global_receitas_futuro()
+        i = self._global_dispendios_presente()
         n = len(self.cash_flow())
         return (f/i)**(1/n) - 1
 
     def il(self):
-        pass
+        disp = self._global_dispendios_presente()
+        receitas = self._global_receitas_presente()
+        return receitas/disp
 
     def roi(self):
-        pass
+        capex_pres = npf.npv(self.tma, self.capex().to_numpy())
+        return self.vpl() / capex_pres
 
     def lu(self):
-        pass
+        receita_pres = npf.npv(self.tma, self.receitas.to_numpy())
+        price = self.prod.price.iloc[0]
+        vol_oil = receita_pres / price
+        return float(self.vpl() / vol_oil)
+
+    def _fun_cup(self, x):
+        self.prod.price.iloc[:] = x
+        self.receitas = self.total_revenue()
+        self.capex_prod = self.capex_producao()
+        self.despesas = self.total_cost()
+        return pd.Series(self.vpl())
+
+    def _find_oil_price_vpl_null(self):
+        or_price = self.prod.price
+        x0 = self.prod.price.mean()['Base']
+        _ = self._fun_cup(x0)
+        raiz = root(self._fun_cup, x0)
+        self.price_vpl_null = raiz.x
+        self._update_model(raiz.x)
+
+    def _update_model(self, price):
+        self.prod.price.iloc[:] = price
+        self.receitas = self.total_revenue()
+        self.capex_prod = self.capex_producao()
+        self.despesas = self.total_cost()
+
+    def _receitas_vpl_zero(self):
+        self._update_model(self.price_vpl_null)
+        receitas_pe = self.receitas.to_numpy()
+        return receitas_pe
+
+    def _dispendios_vpl_zero(self):
+        self._update_model(self.price_vpl_null)
+        disp = self._global_dispendios_presente()
+        return disp
 
     def cup(self):
-        pass
+        if self.price_vpl_null:
+            self._find_oil_price_vpl_null()
+        receita_pres = npf.npv(self.tma, self.receitas.to_numpy())
+        vp_pec = receita_pres / self.or_vpl_null
+        disp = self._dispendios_vpl_zero()
+        self._restore_original()
+        return float(disp / vp_pec)
 
     def cui(self):
-        pass
+        if self.price_vpl_null:
+            self._find_oil_price_vpl_null()
+        receita_pres = npf.npv(self.tma, self.receitas.to_numpy())
+        vp_capex = npf.npv(self.tma, self.capex().to_numpy())
+        vp_pec = receita_pres / self.or_vpl_null
+        self._restore_original()
+        return float(vp_capex / vp_pec)
 
     def cuo(self):
         pass
 
     def cut(self):
         pass
-        

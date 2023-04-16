@@ -8,20 +8,22 @@ class Perfuracao:
     def __init__(self, tarefa, dados_trabalho, modelo='Base',LDA=1_000) -> None:
         self.tarefa = tarefa
         self.modelo = modelo
+        self.LDA = LDA
         self.dados = pd.read_excel(dados_trabalho, sheet_name='Perfuracao')
         self.pocos = self._set_pocos(dados_trabalho)
-        self.pocos = self.pocos.rename(columns={self.pocos.columns[0]:'open'})
         self.comercialidade = pd.read_excel(dados_trabalho, sheet_name='Stock_Oil_Price', parse_dates=['Ano'], usecols=['Ano']).loc[0, 'Ano']
-        self.LDA = LDA
-        self.num_pocos = self.pocos.shape[0]
-        self.pocos['custo']= self.custo_pocos()
+        if tarefa == '1':
+            self.pocos['custo'] = 30e6
+        else:
+            self.pocos['custo'] = self.custo_pocos()
 
     def _set_pocos(self, dados_trabalho):
         if self.tarefa in ('4A', '4B'):
             sheet = 'Abertura_' + self.tarefa
         else:
             sheet = 'Abertura'
-        return pd.read_excel(dados_trabalho, sheet_name=sheet, parse_dates=[self.modelo], usecols=[self.modelo])
+        pocos = pd.read_excel(dados_trabalho, sheet_name=sheet, parse_dates=[self.modelo], usecols=[self.modelo])
+        return pocos.rename(columns={pocos.columns[0]:'open'})
     
     def _tempo_de_broca(self, alpha=0.000889, k=3.6):
         return (1 / (alpha * k)) * (math.e**(alpha * self.dados.fases_pioneiro.sum()) - 1)
@@ -64,7 +66,7 @@ class Perfuracao:
         """Curva de aprendizagem de perfuração - atualizar o tempo de perfuração"""
         tempo_pioneiro = self._tempo_de_perfuracao()
         tempo_perf = pd.DataFrame()
-        pocos = np.arange(1, self.num_pocos+1)
+        pocos = np.arange(1, self.pocos.shape[0] + 1)
         c1 = 2/3 * tempo_pioneiro
         c2 = self._c2(self.modelo)
         c3 = 1/3 * tempo_pioneiro

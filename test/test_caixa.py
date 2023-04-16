@@ -119,3 +119,28 @@ def test_tgr():
     flow = create_obj()
     parcela = flow.tgr()
     assert pytest.approx(parcela) == 0.1101712
+
+def test_tgr():
+    flow = create_obj()
+    parcela = flow.il()
+    assert pytest.approx(parcela) == 1.44
+
+def test_tgr():
+    flow = create_obj()
+    parcela = flow.roi()
+    assert pytest.approx(parcela) == 0.2466575
+
+def test_lu():
+    flow = create_obj()
+    parcela = flow.lu()
+    assert pytest.approx(parcela) == 0.2466575
+
+def test_cup():
+    flow = create_obj()
+    parcela = flow.cup()
+    assert pytest.approx(parcela) == 0.2466575
+
+def test_cup():
+    flow = create_obj()
+    parcela = flow.cui()
+    assert pytest.approx(parcela) == 0.2466575
