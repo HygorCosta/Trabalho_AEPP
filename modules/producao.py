@@ -58,6 +58,7 @@ class ProducaoTarefa01:
 
     def __init__(self, dados_trabalho='config/dados_trabalho.xlsx') -> None:
         self.modelo = 'Up'
+        self._file_name = ['Tarefa01', '.xlsx']
         self.producao = pd.DataFrame()
         self.price = pd.read_excel(dados_trabalho,
                                    sheet_name='Stock_Oil_Price', index_col=0, parse_dates=['Ano'], usecols=['Ano'])

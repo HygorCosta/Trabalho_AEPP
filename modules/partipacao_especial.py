@@ -17,9 +17,9 @@ class PartipacaoEspecial:
         self.price = prod.price[perf.modelo].repeat(4)
         self.price.index = self.prod_trim.index
         self.receita_bruta = self.total_revenue()
-        self.despesas = self.total_cost()
         if self.tarefa in ('4A', '4B'):
             self.dutos = Dutos('config/config_tarefa_4.yaml', self.tarefa)
+        self.despesas = self.total_cost()
         self.prod_trim['receita_liq'] = self.lucro_liquido_pe()
         self.calcular_partipacao_especial()
         self.values = self._group_by_year(self.prod_trim.part_esp)

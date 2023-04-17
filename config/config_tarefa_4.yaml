@@ -59,6 +59,7 @@ capex:
           vel: 2000 # metros por dia
         anm: 11.5e+6 # despesa direta
         plet:
+          num: 2
           custo: 1.2e+6 # por unidade
           vel: 12 # horas por unidade (Instalacão pela embarcacão J-Lay)
         jumper:

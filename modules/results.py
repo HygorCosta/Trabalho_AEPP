@@ -29,13 +29,13 @@ class Results:
         worksheet = writer.sheets['Prod_Tri_PE']
         worksheet.set_zoom(90)
         money_fmt = workbook.add_format({'num_format': '$#,##0'})
-        vol_fmt = workbook.add_format({'num_format': '0,0E+00'})
+        vol_fmt = workbook.add_format({'num_format': '0.0E+00'})
         numb_fmt = workbook.add_format({'num_format': '#,##0'})
-        percent_fmt = workbook.add_format({'num_format': '0,00%'})
+        percent_fmt = workbook.add_format({'num_format': '#,#0%'})
         # Account info columns
         worksheet.set_column('A:A', 20)
         worksheet.set_column('B:F', 10, numb_fmt)
-        worksheet.set_column('G:G', 12, money_fmt)
+        worksheet.set_column('G:G', 12, numb_fmt)
         worksheet.set_column('H:H', 10, percent_fmt)
         worksheet.set_column('I:I', 10, numb_fmt)
         worksheet.set_column('J:J', 12, money_fmt)
