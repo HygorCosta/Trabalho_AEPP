@@ -17,15 +17,15 @@ class PartipacaoEspecial:
         self.price = prod.price[perf.modelo].repeat(4)
         self.price.index = self.prod_trim.index
         self.receita_bruta = self.total_revenue()
-        self.despesas = self.total_cost().sum(axis=1)
+        self.despesas = self.total_cost()
         if self.tarefa in ('4A', '4B'):
             self.dutos = Dutos('config/config_tarefa_4.yaml', self.tarefa)
         self.prod_trim['receita_liq'] = self.lucro_liquido_pe()
         self.calcular_partipacao_especial()
         self.values = self._group_by_year(self.prod_trim.part_esp)
 
-    def _group_by_year(self, valor: pd.Series):
-        grupo = pd.Grouper(level='date', axis=0, freq='Y')
+    def _group_by_year(self, valor: pd.Series, period='y'):
+        grupo = pd.Grouper(level='date', axis=0, freq=period)
         valor.index.name = 'date'
         return valor.groupby(grupo).sum()
 
@@ -76,16 +76,17 @@ class PartipacaoEspecial:
         return despesas
     
     def lucro_bruto(self):
-        return self.receita_bruta - self.despesas
+        return self.receita_bruta - self.despesas.sum(axis=1)
 
     def _add_depreciacao_p16(self, depreciacao):
         capex_duto = self.dutos.capex()
         data_lanc = pd.Timestamp(self.dutos.dados['capex']['ano_lancamento'])
         index = depreciacao.index.get_loc(data_lanc - relativedelta(days=1))
         rate = self.dutos.dados['capex']['taxa_de_depre']
-        periodos = (self.dutos.dados['capex']['anos_depre'] + 1) * 4
+        periodos = (self.dutos.dados['capex']['anos_depre'] + 1)
         capex_linear = np.linspace(0, rate*capex_duto, periodos)
-        depreciacao.iloc[index:index+periodos] = capex_linear
+        capex_linear = np.repeat(capex_linear, 4) / 4
+        depreciacao.iloc[index:index+periodos*4] = capex_linear
         return depreciacao
 
     def depreciacao(self, taxa=0.03, duracao=20*4) -> pd.Series:
