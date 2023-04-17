@@ -20,7 +20,7 @@ def test_opex_inspecao_dutos():
 
 def test_opex_inspecao_equipamentos():
     opex = create_opcao_a()
-    assert pytest.approx(opex.opex_inspecao_equipamentos()) == 2 + 2
+    assert pytest.approx(opex.opex_inspecao_equip()) == 2 + 2
 
 def test_intervencao():
     opex = create_opcao_a()

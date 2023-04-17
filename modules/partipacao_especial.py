@@ -4,6 +4,7 @@ from .producao import Producao
 from .perfuracao import Perfuracao
 from .dutos import Dutos
 from dateutil.relativedelta import relativedelta
+from datetime import date
 
 
 class PartipacaoEspecial:
@@ -33,80 +34,89 @@ class PartipacaoEspecial:
         index = pd.Index(pd.DatetimeIndex(self.price.index))
         return index.get_loc(self.pocos.open[0] - relativedelta(days=1)) + 1
 
-    def __init_cost_series(self):
+    def __init_series(self):
         return pd.Series(np.zeros(len(self.price)), index=self.prod_trim.index)
 
     def _receita_gas(self, preco_gas=4, fator=37.31):
         return self.prod_trim.gas_prod * preco_gas * fator
-    
+
     def total_revenue(self):
         rec_oleo = self.prod_trim.oil_prod * self.price * 1000 * 6.29
         return rec_oleo + self._receita_gas()
 
     def imposto_producao(self, roy=0.1, pasep=0.0925) -> pd.Series:
         return (roy + pasep) * self.receita_bruta
-    
+
     def opex_variavel(self, co=3, cwi=2, cwp=2, cg=2, fator_gas=1017.532078) -> pd.Series:
         oleo = co * self.prod_trim.oil_prod
         wprod = cwp * self.prod_trim.water_prod
         gas = cg * self.prod_trim.gas_prod / fator_gas
         winj = cwi * self.prod_trim.water_inj
         return (oleo + winj + wprod + gas) * 1000 * 6.29
-    
+
     def opex_fixo(self, taxa=0.025):
-        opex_fixo = self.__init_cost_series()
+        opex_fixo = self.__init_series()
         id_prod = self.__get_start_prod_index()
         opex_fixo.iloc[id_prod:] = taxa * self.capex_prod / 4
         return opex_fixo
 
     def descomissionamento(self, taxa=0.2) -> pd.Series:
-        descom = self.__init_cost_series()
+        descom = self.__init_series()
         descom.iloc[-4:] = taxa * self.capex_prod / 4
         if self.tarefa in ('4A', '4B'):
             descom.iloc[-4:] += self.dutos.descomissionamento() / 4
         return descom
+
+    def _opex_p16(self):
+        inicia_serie = self.__init_series()
+        opex_16 = self.dutos.opex_trimestral()
+        opex = inicia_serie + opex_16
+        return opex.fillna(0)
 
     def total_cost(self) -> pd.DataFrame:
         imposto = self.imposto_producao()
         opex_var = self.opex_variavel()
         opex_fixo = self.opex_fixo()
         descom = self.descomissionamento()
-        despesas = pd.concat([imposto, opex_var, opex_fixo, descom], axis=1)
-        despesas.columns = ['imposto', 'opex_var', 'opex_fixo', 'descom']
+        opex_p16 = self._opex_p16()
+        despesas = pd.concat(
+            [imposto, opex_var, opex_fixo, descom, opex_p16], axis=1)
+        despesas.columns = ['imposto', 'opex_var',
+                            'opex_fixo', 'descom', 'opex_p16']
         return despesas
-    
+
     def lucro_bruto(self):
         return self.receita_bruta - self.despesas.sum(axis=1)
 
     def _add_depreciacao_p16(self, depreciacao):
         capex_duto = self.dutos.capex()
-        data_lanc = pd.Timestamp(self.dutos.dados['capex']['ano_lancamento'])
-        index = depreciacao.index.get_loc(data_lanc - relativedelta(days=1))
+        data_lanc = date(self.dutos.dados['capex']['ano_lancamento'], 12, 31)
+        index = depreciacao.index.get_loc(pd.Timestamp(data_lanc)) + 1 - 4
         rate = self.dutos.dados['capex']['taxa_de_depre']
         periodos = (self.dutos.dados['capex']['anos_depre'] + 1)
         capex_linear = np.linspace(0, rate*capex_duto, periodos)
         capex_linear = np.repeat(capex_linear, 4) / 4
-        depreciacao.iloc[index:index+periodos*4] = capex_linear
+        depreciacao.iloc[index:index+4*periodos] += capex_linear
         return depreciacao
 
     def depreciacao(self, taxa=0.03, duracao=20*4) -> pd.Series:
-        depreciacao = self.__init_cost_series()
+        depreciacao = self.__init_series()
         id_prod = self.__get_start_prod_index()
         depreciacao.iloc[id_prod:id_prod+duracao] = taxa * self.capex_prod / 4
         if self.tarefa in ('4A', '4B'):
             depreciacao = self._add_depreciacao_p16(depreciacao)
         return depreciacao
-    
+
     def net_income_before_tax(self) -> pd.Series:
         return self.lucro_bruto() - self.depreciacao()
-    
+
     def lucro_liquido_pe(self):
         lucro = self.lucro_bruto()
         depreciacao = self.depreciacao()
         capex = self.capex.repeat(4) / 4
         capex.index = lucro.index
-        return  lucro - depreciacao - capex
-    
+        return lucro - depreciacao - capex
+
     def net_profit_tax(self, ir=0.25, csll=0.09) -> pd.Series:
         lucro_liq_trib = self.net_income_before_tax()
         lucro_liq_trib[lucro_liq_trib < 0] = 0
@@ -116,7 +126,7 @@ class PartipacaoEspecial:
         liq_trib = self.net_income_before_tax()
         impostos = self.net_profit_tax()
         return liq_trib - impostos
-    
+
     def _redutor(self, prod_trim) -> pd.Series:
         redutor = 0
         aliquota = prod_trim.aliquota
@@ -179,7 +189,7 @@ class PartipacaoEspecial:
                 case 0.4:
                     redutor = 1181.25
         return pd.Series(redutor, dtype='float64')
-    
+
     def _aliquota(self, prod_trim) -> pd.Series:
         anos_base = self.pocos.open[0].year
         aliquota = 0
@@ -251,6 +261,7 @@ class PartipacaoEspecial:
     def calcular_partipacao_especial(self):
         self.aliquota_partipacao_especial()
         self._redutor_part_esp()
-        prod_liq = self.prod_trim.equiv_oil - self.prod_trim.redutor 
-        self.prod_trim['part_esp'] = self.prod_trim.aliquota * (prod_liq * self.prod_trim.receita_liq / self.prod_trim.equiv_oil)
+        prod_liq = self.prod_trim.equiv_oil - self.prod_trim.redutor
+        self.prod_trim['part_esp'] = self.prod_trim.aliquota * \
+            (prod_liq * self.prod_trim.receita_liq / self.prod_trim.equiv_oil)
         self.prod_trim.part_esp = self.prod_trim.part_esp.fillna(0)

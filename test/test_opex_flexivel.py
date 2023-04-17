@@ -24,7 +24,7 @@ def test_inspecao_dutos():
 
 def test_inspecao_equipamentos():
     opex = create_opcao_a()
-    assert pytest.approx(opex.opex_inspecao_equipamentos()) == 4
+    assert pytest.approx(opex.opex_inspecao_equip()) == 4
 
 def test_intervencao():
     opex = create_opcao_a()
