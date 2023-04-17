@@ -10,6 +10,8 @@ tarefa_01 = Caixa(tarefa='1', modelo='Up')
 tarefa_02_down = Caixa(
     tarefa='2', dados_producao='producao/Pituba_Down_Mensal.xlsx', modelo='Down')
 
+Results(tarefa_02_down).write_results()
+
 # Tarefas 02 - Base:
 tarefa_02_base = Caixa(
     tarefa='2', dados_producao='producao/Pituba_Base_Mensal.xlsx')
