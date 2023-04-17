@@ -128,12 +128,12 @@ class Results:
         numb_fmt = workbook.add_format({'num_format': '#,##0'})
         money_fmt = workbook.add_format({'num_format': '$#,##0'})
         # Account info columns
+        number_rows, number_cols = self.hub.shape
         worksheet.set_column('A:A', 20)
-        worksheet.set_column('B:O', 14, money_fmt)
-        number_rows = len(self.hub)
+        worksheet.set_column(2, number_cols+1, 14, money_fmt)
         # Total formatting
         total_fmt = workbook.add_format({'align': 'right', 'num_format': '##0,00E+00', 'bold': True, 'bottom':6})
-        for column in range(1, 15):
+        for column in range(1, number_cols+1):
             # Determine where we will place the formula
             cell_location = xl_rowcol_to_cell(number_rows+1, column)
             # Get the range to use for the sum formula
