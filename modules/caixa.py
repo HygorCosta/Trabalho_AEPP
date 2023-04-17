@@ -35,49 +35,22 @@ class Caixa:
     def __str__(self):
         return f'O VPL do projeto eh de $ {self.vpl():,.2f}.'
 
+    def _group_by_year(self, valor: pd.Series, period='Y'):
+        grupo = pd.Grouper(level='date', axis=0, freq=period)
+        valor.index.name = 'date'
+        return valor.groupby(grupo).sum()
+
     def _restore_original(self):
         self.receitas, self.capex_prod, self.despesas = self.__original
         self.price_vpl_null = None
 
-    def _receita_gas(self, preco_gas=4, fator=37.31):
-        m3_to_bbl = 6.289814
-        return self.prod.prod_anual.gas_prod * preco_gas * fator / 1000 / m3_to_bbl
-
     def total_revenue(self):
-        self.prod.price.index = self.prod.prod_anual.index
-        rec_oleo = self.prod.prod_anual.oil_prod * self.prod.price[self.modelo]
-        return rec_oleo + self._receita_gas()
+        return self._group_by_year(self.part_esp.receita_bruta)
 
     def total_cost(self) -> pd.DataFrame:
-        despesas = self.cost_of_goods_sold()
-        return despesas.join(self.fix_cost())
-
-    def fix_cost(self) -> pd.DataFrame:
-        despesas = pd.DataFrame()
-        despesas['opex_fixo'] = self.opex_fixo()
-        despesas['descom'] = self.descomissionamento()
+        despesas = self._group_by_year(self.part_esp.despesas)
+        despesas.imposto += self.part_esp.values
         return despesas
-
-    def cost_of_goods_sold(self) -> pd.DataFrame:
-        despesas = pd.DataFrame()
-        despesas['impostos'] = self.imposto_producao()
-        despesas['opex_var'] = self.opex_variavel()
-        return despesas
-
-    def imposto_producao(self, roy=0.1, pasep=0.0925) -> pd.Series:
-        imp_direto = (roy + pasep) * self.receitas
-        return imp_direto + self.part_esp.values
-
-    @staticmethod
-    def __diff_month(d1, d2):
-        return (d1.year - d2.year) * 12 + d1.month - d2.month
-
-    def opex_variavel(self, co=3, cwi=2, cwp=2, cg=2) -> pd.Series:
-        oleo = co * self.prod.prod_anual.oil_prod
-        winj = cwi * self.prod.prod_anual.water_inj
-        wprod = cwi * self.prod.prod_anual.water_prod
-        gas = cg * self.prod.prod_anual.gas_prod / 1017.5321
-        return oleo + winj + wprod + gas
 
     def _npv(self, vf, data_despesa, tma=0.1, period='Y'):
         comercialidade = datetime.strptime(
@@ -87,9 +60,6 @@ class Caixa:
             time_step = data.year - comercialidade.year
         elif period == 'd':
             time_step = (data - comercialidade).days
-        elif period == 'M':
-            time_step = self.__diff_month(
-                data_despesa, self.perf.comercialidade)
         else:
             raise TypeError("Período inválido.")
         vp = vf / (1 + tma)**time_step
@@ -117,50 +87,19 @@ class Caixa:
                 capex_prod += 170e6
         return float(capex_prod)
 
-    def __get_start_prod_index(self):
+    def _start_prod_index(self):
         index = pd.Index(pd.DatetimeIndex(self.prod.price.index).year)
         return index.get_loc(self.perf.pocos.open[0].year)
 
     def __init_cost_series(self):
-        return pd.Series(np.zeros(len(self.prod.price.index)), index=self.prod.price.index)
-
-    def opex_fixo(self, taxa=0.025):
-        opex_fixo = self.__init_cost_series()
-        id_prod = self.__get_start_prod_index()
-        opex_fixo.iloc[id_prod:] = taxa * self.capex_prod
-        return opex_fixo.replace()
-
-    def descomissionamento(self, taxa=0.2) -> pd.Series:
-        descom = self.__init_cost_series()
-        descom.iloc[-1] = taxa * self.capex_prod
-        if self.tarefa in ('4A', '4B'):
-            descom.iloc[-1] += self.dutos.descomissionamento()
-        return descom
-
-    def gross_profit(self):
-        return self.receitas.sum() - self.cost_of_goods_sold().sum()
+        ref =  self.prod.prod_anual.index
+        return pd.Series(np.zeros(len(ref)), index=ref)
 
     def lucro_bruto(self):
         return self.receitas - self.despesas.sum(axis=1)
 
-    def _add_depreciacao_p16(self, depreciacao):
-        capex_duto = self.dutos.capex()
-        data_lanc = pd.Timestamp(
-            self.dutos.dados['capex']['ano_lancamento'] - timedelta(days=1))
-        index = depreciacao.index.get_loc(data_lanc)
-        rate = self.dutos.dados['capex']['taxa_de_depre']
-        anos_depre = self.dutos.dados['capex']['anos_depre'] + 1
-        capex_linear = np.linspace(0, rate*capex_duto, anos_depre)
-        depreciacao.iloc[index:index+anos_depre] = capex_linear
-        return depreciacao
-
     def depreciacao(self, taxa=0.03, duracao=20) -> pd.Series:
-        depreciacao = self.__init_cost_series()
-        id_prod = self.__get_start_prod_index()
-        depreciacao.iloc[id_prod:id_prod+duracao] = taxa * self.capex_prod
-        if self.tarefa in ('4A', '4B'):
-            depreciacao = self._add_depreciacao_p16(depreciacao)
-        return depreciacao
+        return self._group_by_year(self.part_esp.depreciacao())
 
     def valor_residual(self, taxa=0):
         capex_prod = self.__init_cost_series() + self.capex_prod
