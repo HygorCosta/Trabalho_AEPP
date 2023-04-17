@@ -3,7 +3,8 @@
 # Parâmetros de Projeto
 #--------------------------
 capex:
-  ano_lancamento: 2044-01-01 # ano de lancamento do capex no projeto
+  ano_lancamento: 2044 # ano de lancamento do capex no projeto
+  ano_fim: 2053
   taxa_de_depre: 0.6 #taxa de depreciação
   anos_depre: 9 # anos de depreciação
 
@@ -90,6 +91,7 @@ capex:
 opex:
   inspecao:
     pidf:
+      ano_lanc: 2045
       anos_restante: 8 # anos 2053 - 2045
       # v4 desprezado no projeto
       v3:
@@ -107,6 +109,7 @@ opex:
           flexivel: 5 # anos
           umbilical: 10 # anos
     pidr:
+      ano_lanc: 2046
       anos_restante: 7 # anos 2053 - 2046
       diaria: 120.0e+3
       duracao: 5 # dias
