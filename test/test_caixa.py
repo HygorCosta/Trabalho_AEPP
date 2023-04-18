@@ -80,7 +80,7 @@ def test_calcular_imposto_lucro_liquido_tributavel():
 
 def test_calcular_parcelas_sac():
     flow = create_obj()
-    parcela = flow.payment_loan_sac()['Pagamento']
+    parcela = flow.payment_loan_price()['Pagamento']
     assert pytest.approx(parcela.iloc[0]) == 363_643_116.27  
     assert pytest.approx(parcela.iloc[1]) == 353_178_344.08  
     assert pytest.approx(parcela.iloc[-1]) == 0 

@@ -7,7 +7,10 @@ class Results:
     def __init__(self, projeto) -> None:
         self.projeto = projeto
         self.hub = self._hub_financial()
-        self.financiamento = self.projeto.payment_loan_sac()
+        self.financiamento = self.projeto.payment_loan_price()
+        if self.projeto.tarefa in ('4A', '4B'):
+            self.hub_p16 = projeto.dutos.hub_opex
+
 
     def _hub_financial(self):
         receita = self.projeto.receitas.rename('receita')
@@ -161,6 +164,48 @@ class Results:
         worksheet.conditional_format(color_range, {'type': 'bottom',
                                                 'value': '5',
                                                 'format': format1})
+
+    def _set_spreadsheet_format_p16(self, writer):
+        workbook = writer.book
+        worksheet = writer.sheets['P16']
+        worksheet.set_zoom(90)
+        vol_fmt = workbook.add_format({'num_format': '0,0E+00'})
+        numb_fmt = workbook.add_format({'num_format': '#,##0'})
+        money_fmt = workbook.add_format({'num_format': '$#,##0'})
+        # Account info columns
+        number_rows, number_cols = self.hub_p16.shape
+        worksheet.set_column('A:A', 20)
+        worksheet.set_column(2, number_cols+1, 14, money_fmt)
+        # Total formatting
+        total_fmt = workbook.add_format({'align': 'right', 'num_format': '##0,00E+00', 'bold': True, 'bottom':6})
+        for column in range(1, number_cols+1):
+            # Determine where we will place the formula
+            cell_location = xl_rowcol_to_cell(number_rows+1, column)
+            # Get the range to use for the sum formula
+            start_range = xl_rowcol_to_cell(1, column)
+            end_range = xl_rowcol_to_cell(number_rows, column)
+            # Construct and write the formula
+            formula = "=SUM({:s}:{:s})".format(start_range, end_range)
+            worksheet.write_formula(cell_location, formula, total_fmt)
+        # Add a total label
+        worksheet.write_string(number_rows+1, 0, "Total",total_fmt) 
+        # Define our range for the color formatting
+        color_range = "O2:O{}".format(number_rows+1)
+        # Add a format. Light red fill with dark red text.
+        format1 = workbook.add_format({'bg_color': '#FFC7CE',
+                               'font_color': '#9C0006'})
+        # Add a format. Green fill with dark green text.
+        format2 = workbook.add_format({'bg_color': '#C6EFCE',
+                               'font_color': '#006100'})
+        # Highlight the top 5 values in Green
+        worksheet.conditional_format(color_range, {'type': 'top',
+                                                'value': '5',
+                                                'format': format2})
+
+        # Highlight the bottom 5 values in Red
+        worksheet.conditional_format(color_range, {'type': 'bottom',
+                                                'value': '5',
+                                                'format': format1})
             
     def write_results(self):
         Path("out\\").mkdir(parents=True, exist_ok=True)
@@ -169,6 +214,9 @@ class Results:
         self.projeto.prod.prod_anual.to_excel(writer, sheet_name='Prod_Anual')
         self.projeto.prod.prod_trim.to_excel(writer, sheet_name='Prod_Tri_PE')
         self.financiamento.to_excel(writer, sheet_name='Financiamento')
+        if self.projeto.tarefa in ('4A', '4B'):
+            self.hub_p16.to_excel(writer, sheet_name='P16')
+            self._set_spreadsheet_format_p16(writer)
         self.hub.to_excel(writer, sheet_name='Fluxo_Caixa')
         self._set_spreadsheet_format_prod_anual(writer)
         self._set_spreadsheet_format_prod_trimestral(writer)

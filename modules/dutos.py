@@ -10,6 +10,11 @@ class Dutos:
         self.dados = self.read(config)
         self.tipo = tipo  # 'A'-flexível, 'B'-rígido
         self.capex_flow, self.opex_flow = self.select_capex()
+        self._opex_flexivel = OpexFlexivel(self.dados)
+        self._opex_umbilical = OpexFlexivel(self.dados, tipo='umbilical')
+        self.hub_opex = self.opex()
+        self.total_opex = self.hub_opex.sum(axis=1)
+
 
     def read(self, config):
         with open(config, 'r') as f:
@@ -29,30 +34,36 @@ class Dutos:
         umbilical = Umbilical(self.dados).capex()
         gaslift = GasLift(self.dados).capex()
         riser = Riser(self.dados).capex()
-        return umbilical + gaslift + riser + self.capex_flow.capex()
+        flowline = self.capex_flow.capex()
+        return umbilical + gaslift + riser + flowline
 
     def opex(self):
-        umbilical = OpexFlexivel(
-            self.dados, tipo='umbilical').opex_inspecao_dutos()
-        gaslift = self.opex_flow.opex_inspecao_dutos()
-        riser = self.opex_flow.opex_inspecao_dutos()
+        umbilical = self._opex_umbilical.opex_inspecao_dutos()
+        gaslift = self._opex_flexivel.opex_inspecao_dutos()
+        riser = self._opex_flexivel.opex_inspecao_dutos()
         if self.tipo == '4A':
             flowline = self.opex_flow.opex_inspecao_dutos()
             equipamentos = self.opex_flow.opex_inspecao_equip()
             intervencao = self.opex_flow.opex_intervencao()
-            return umbilical + gaslift + riser + flowline + equipamentos + intervencao
+            lista = [umbilical, gaslift, riser, flowline, equipamentos, intervencao]
+            hub_opex = pd.concat(lista, axis=1)
+            hub_opex.columns = ['umbilical', 'gaslift', 'riser', 'flowline', 'equipamentos', 'intervencao']
+            return hub_opex
         elif self.tipo == '4B':
-            flowline = self.opex_flow(self.dados).opex_inspecao_dutos()
-            equipamentos = self.opex_flow(self.dados).opex_inspecao_equip()
-            intervencao = self.opex_flow(self.dados).opex_intervencao()
-            inibidores = self.opex_flow(self.dados).opex_inibidores()
-            return umbilical + gaslift + riser + flowline + equipamentos + intervencao + inibidores
+            flowline = self.opex_flow.opex_inspecao_dutos()
+            equipamentos = self.opex_flow.opex_inspecao_equip()
+            intervencao = self.opex_flow.opex_intervencao()
+            inibidores = self.opex_flow.opex_inibidores()
+            lista = [umbilical, gaslift, riser, flowline, equipamentos, intervencao, inibidores]
+            hub_opex = pd.concat(lista, axis=1)
+            hub_opex.columns = ['umbilical', 'gaslift', 'riser', 'flowline', 'equipamentos', 'intervencao', 'inibidores']
+            return hub_opex
         else:
             raise ValueError(
                 f'Parâmetro {self.tipo} eh invalido, apenas A para flexivel e B para rigido.')
 
     def opex_trimestral(self):
-        opex_p16 = self.opex().repeat(4) / 4
+        opex_p16 = self.total_opex.repeat(4) / 4
         opex_p16.index = self.opex_flow._quarter_series().index
         return opex_p16
 

@@ -24,7 +24,7 @@ class Caixa:
             self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
         self.capex_prod = self.capex_producao()
         self.part_esp = PartipacaoEspecial(
-            self.prod, self.perf, self.capex_prod, self.capex(), self.payment_loan_sac())
+            self.prod, self.perf, self.capex_prod, self.capex(), self.payment_loan_price())
         self.receitas = self.total_revenue()
         self.despesas = self.total_cost()
         self.tma = 0.1
@@ -140,6 +140,18 @@ class Caixa:
             financ.loc[id] = [saldo_dev, juros, amort, pgto]
         return financ
 
+    def payment_loan_price(self, perc_fin=0.8, taxa=6.78/100, nparc=20):
+        financ = pd.DataFrame(0, columns=[
+                              'saldo_devedor', 'juros', 'amortizacao', 'pagamento'], index=self.__init_cost_series().index)
+        saldo_dev = perc_fin * self.capex_prod
+        parcela = saldo_dev*((1+taxa)**nparc * taxa)/((1+taxa)**nparc - 1)
+        for id in financ.index[:nparc]:
+            juros = taxa * saldo_dev
+            amort = parcela - juros
+            saldo_dev -= amort
+            financ.loc[id] = [saldo_dev, juros, amort, parcela]
+        return financ
+
     def _add_capex_p16(self, capex):
         capex_duto = self.dutos.capex()
         data_lanc = date(self.dutos.dados['capex']['ano_lancamento'], 12, 31)
@@ -147,7 +159,7 @@ class Caixa:
         return capex
 
     def capex(self, tma=0.1, parcela=0.8):
-        inv = self.payment_loan_sac().pagamento
+        inv = self.payment_loan_price().pagamento
         proprio_fv = (1 + tma) * (1 - parcela) * self.capex_prod
         inv.iloc[0] += proprio_fv
         if self.tarefa in ('4A', '4B'):
