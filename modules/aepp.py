@@ -42,13 +42,15 @@ class AEPP:
         return npf.npv(self.tma, cf)
 
     def il(self):
-        disp = self._dispendios_presente()
         receitas = self._receitas_presente()
+        disp = self._dispendios_presente()
         return receitas/disp
 
     def roi(self):
-        capex_pres = npf.npv(self.tma, self.capex().to_numpy())
-        return self.vpl() / capex_pres
+        capex = self.caixa.capex().values
+        capex = np.insert(capex, 0, 0)
+        capex_pres = npf.npv(self.caixa.tma, capex)
+        return self.caixa.vpl() / capex_pres
 
     def lu(self):
         receita_pres = npf.npv(self.tma, self.receitas.to_numpy())

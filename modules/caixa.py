@@ -35,7 +35,7 @@ class Caixa:
     def __call__(self, preco=None):
         if preco:
             self.prod.price = preco
-        self.update_model()
+            self.update_model()
         return self.vpl()
 
     def __str__(self):

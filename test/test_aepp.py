@@ -17,3 +17,7 @@ def test_dispendios_presente():
 def test_dispendios_presente():
     aepp = create_projeto()
     aepp.tgr()
+
+def test_dispendios_presente():
+    aepp = create_projeto()
+    aepp.roi()
