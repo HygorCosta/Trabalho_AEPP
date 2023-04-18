@@ -5,12 +5,11 @@ from modules.results import Results
 
 # Tarefas 01:
 tarefa_01 = Caixa(tarefa='1', modelo='Up')
+Results(tarefa_01).write_results()
 
 # Tarefas 02 - Down:
 tarefa_02_down = Caixa(
     tarefa='2', dados_producao='producao/Pituba_Down_Mensal.xlsx', modelo='Down')
-
-Results(tarefa_02_down).write_results()
 
 # Tarefas 02 - Base:
 tarefa_02_base = Caixa(
@@ -18,7 +17,8 @@ tarefa_02_base = Caixa(
 
 # Tarefas 02 - Up:
 tarefa_02_up = Caixa(
-    tarefa='2', dados_producao='producao/Pituba_Up_Mensal.xlsx', modelo='Up')
+    tarefa='2', dados_producao='producao/Pituba_Up_Mensal.xlsx',
+    modelo='Up')
 
 vpl_proj_t2 = (tarefa_02_down.vpl() +
                tarefa_02_base.vpl() + tarefa_02_up.vpl()) / 3
@@ -41,3 +41,9 @@ tarefas = [tarefa_01, tarefa_02_down, tarefa_02_base,
            tarefa_02_up, tarefa_03, tarefa_04_flex, tarefa_04_rigido]
 for tarefa in tarefas:
     Results(tarefa).write_results()
+
+# TODO:
+# Gráficos: Fluxo de Caixa descontado por ano
+# Tabela com índices econômicos
+# Ganhos LS vs Base - Gerar curvas de produção
+# P16 vs Base - Curvas de produção
