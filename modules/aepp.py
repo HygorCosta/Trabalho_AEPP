@@ -1,39 +1,47 @@
 import pandas as pd
+import numpy_financial as npf
+import numpy as np
 from .caixa import Caixa
 
 
 class AEPP:
 
-    def __init__(self, caixa: Caixa) -> None:
+    def __init__(self, caixa) -> None:
         self.caixa = caixa
 
+    def vpl(self):
+        return self.caixa()
+
     def tir(self) -> float:
-        return npf.irr(self.cash_flow())
+        return npf.irr(self.caixa.cash_flow())
 
     def _valor_futuro(self, valor, nint):
         return pd.Series(valor * (1 + self.tma)**nint)
 
-    def _global_dispendios_presente(self):
-        cf = self.cash_flow().rename('valor').reset_index()['valor']
+    def _dispendios_presente(self):
+        # valor absoluto
+        cf = self.caixa.cash_flow().values
         cf[cf > 0] = 0
-        return -npf.npv(self.tma, cf.to_numpy())
+        cf = np.insert(cf, 0, 0)
+        return -npf.npv(self.caixa.tma, cf)
 
-    def _global_receitas_futuro(self):
-        cf = self.cash_flow().rename('valor').reset_index()['valor']
+    def _receitas_futuro(self):
+        cf = self.caixa.cash_flow().values
         cf[cf < 0] = 0
-        return cf.apply(lambda x: npf.fv(self.tma, len(cf) - 1 - cf.loc[cf == x].index[0], 0, -x)).sum()
+        periods = np.arange(0, len(cf))[::-1]
+        fv = npf.fv(self.caixa.tma, periods, 0, -cf)
+        return np.sum(fv)
 
+    def tgr(self) -> float:
+        f = self._receitas_futuro()
+        i = self._dispendios_presente()
+        n = len(self.caixa.cash_flow()) - 1
+        return (f/i)**(1/n) - 1
+    
     def _global_receitas_presente(self):
         cf = self.cash_flow().rename('valor').reset_index()['valor']
         cf[cf < 0] = 0
         return npf.npv(self.tma, cf.to_numpy())
-
-    # TODO: corrigir parâmetros econômicos
-    def tgr(self) -> float:
-        f = self._global_receitas_futuro()
-        i = self._global_dispendios_presente()
-        n = len(self.cash_flow())
-        return (f/i)**(1/n) - 1
 
     def il(self):
         disp = self._global_dispendios_presente()
@@ -103,4 +111,7 @@ class AEPP:
         pass
 
     def cut(self):
+        pass
+
+    def hub_indicadores_economicos(self):
         pass
