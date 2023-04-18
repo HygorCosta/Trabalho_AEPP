@@ -21,3 +21,7 @@ def test_dispendios_presente():
 def test_dispendios_presente():
     aepp = create_projeto()
     aepp.roi()
+
+def test_dispendios_presente():
+    aepp = create_projeto()
+    aepp.lu()

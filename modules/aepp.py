@@ -39,7 +39,7 @@ class AEPP:
         cf = self.caixa.cash_flow().values
         cf[cf < 0] = 0
         cf = np.insert(cf, 0, 0)
-        return npf.npv(self.tma, cf)
+        return npf.npv(self.caixa.tma, cf)
 
     def il(self):
         receitas = self._receitas_presente()
@@ -53,10 +53,10 @@ class AEPP:
         return self.caixa.vpl() / capex_pres
 
     def lu(self):
-        receita_pres = npf.npv(self.tma, self.receitas.to_numpy())
-        price = self.prod.price.iloc[0]
-        vol_oil = receita_pres / price
-        return float(self.vpl() / vol_oil)
+        receita_pres = self._receitas_presente()
+        price = self.caixa.prod.price.values[0][0]
+        vp_pec = receita_pres / price
+        return self.caixa.vpl() / vp_pec
 
     def _fun_cup(self, x):
         self.prod.price.iloc[:] = x
