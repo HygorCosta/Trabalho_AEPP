@@ -2,10 +2,10 @@
 import pandas as pd
 from modules.caixa import Caixa
 from modules.results import Results
+from modules.aepp import AEPP
 
 # Tarefas 01:
 tarefa_01 = Caixa(tarefa='1', modelo='Up')
-Results(tarefa_01).write_results()
 
 # Tarefas 02 - Down:
 tarefa_02_down = Caixa(
@@ -40,7 +40,8 @@ tarefa_04_rigido = Caixa(
 tarefas = [tarefa_01, tarefa_02_down, tarefa_02_base,
            tarefa_02_up, tarefa_03, tarefa_04_flex, tarefa_04_rigido]
 for tarefa in tarefas:
-    Results(tarefa).write_results()
+    parametros = AEPP(tarefa).hub_indicadores_economicos()
+    Results(tarefa, parametros).write_results()
 
 # TODO:
 # Gráficos: Fluxo de Caixa descontado por ano

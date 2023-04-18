@@ -4,8 +4,9 @@ from xlsxwriter.utility import xl_rowcol_to_cell
 
 class Results:
 
-    def __init__(self, projeto) -> None:
+    def __init__(self, projeto, parametros_eco) -> None:
         self.projeto = projeto
+        self.parametros_eco = parametros_eco
         self.hub = self._hub_financial()
         self.financiamento = self.projeto.payment_loan_price()
         if self.projeto.tarefa in ('4A', '4B'):
@@ -206,6 +207,18 @@ class Results:
         worksheet.conditional_format(color_range, {'type': 'bottom',
                                                 'value': '5',
                                                 'format': format1})
+
+    def _set_spreadsheet_format_aepp(self, writer):
+        workbook = writer.book
+        worksheet = writer.sheets['AEPP']
+        worksheet.set_zoom(90)
+        vol_fmt = workbook.add_format({'num_format': '0,0E+00'})
+        numb_fmt = workbook.add_format({'num_format': '#,##0'})
+        money_fmt = workbook.add_format({'num_format': '$#,##0'})
+        # Account info columns
+        number_rows = self.parametros_eco.shape[0]
+        worksheet.set_column('A:A', 20)
+        worksheet.set_column('B:B', 14)
             
     def write_results(self):
         Path("out\\").mkdir(parents=True, exist_ok=True)
@@ -218,9 +231,11 @@ class Results:
             self.hub_p16.to_excel(writer, sheet_name='P16')
             self._set_spreadsheet_format_p16(writer)
         self.hub.to_excel(writer, sheet_name='Fluxo_Caixa')
+        self.parametros_eco.to_excel(writer, sheet_name='AEPP')
         self._set_spreadsheet_format_prod_anual(writer)
         self._set_spreadsheet_format_prod_trimestral(writer)
         self._set_spreadsheet_format_financ(writer)
         self._set_spreadsheet_format_fluxo_caixa(writer)
+        self._set_spreadsheet_format_aepp(writer)
         writer.close()
         print('Resultados gerados! Veja a pasta @out.')
