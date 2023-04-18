@@ -15,9 +15,6 @@ class AEPP:
     def tir(self) -> float:
         return npf.irr(self.caixa.cash_flow())
 
-    def _valor_futuro(self, valor, nint):
-        return pd.Series(valor * (1 + self.tma)**nint)
-
     def _dispendios_presente(self):
         # valor absoluto
         cf = self.caixa.cash_flow().values
@@ -38,14 +35,15 @@ class AEPP:
         n = len(self.caixa.cash_flow()) - 1
         return (f/i)**(1/n) - 1
     
-    def _global_receitas_presente(self):
-        cf = self.cash_flow().rename('valor').reset_index()['valor']
+    def _receitas_presente(self):
+        cf = self.caixa.cash_flow().values
         cf[cf < 0] = 0
-        return npf.npv(self.tma, cf.to_numpy())
+        cf = np.insert(cf, 0, 0)
+        return npf.npv(self.tma, cf)
 
     def il(self):
-        disp = self._global_dispendios_presente()
-        receitas = self._global_receitas_presente()
+        disp = self._dispendios_presente()
+        receitas = self._receitas_presente()
         return receitas/disp
 
     def roi(self):
