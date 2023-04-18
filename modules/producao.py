@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pandas as pd
 import calendar
-from datetime import datetime, date
+from datetime import date
 from dateutil.relativedelta import relativedelta
 from pathlib import Path
 

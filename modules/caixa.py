@@ -13,6 +13,7 @@ from .partipacao_especial import PartipacaoEspecial
 class Caixa:
 
     def __init__(self, tarefa: str, modelo='Base', dados_producao=None):
+        self.tma = 0.1
         self.tarefa = tarefa
         self.modelo = modelo
         self.perf = Perfuracao(tarefa, modelo)
@@ -22,12 +23,20 @@ class Caixa:
             self.prod = Producao(dados_producao, modelo)
         if tarefa in ('4A', '4B'):
             self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
+        self.update_model()
+    
+    def update_model(self):
         self.capex_prod = self.capex_producao()
         self.part_esp = PartipacaoEspecial(
-            self.prod, self.perf, self.capex_prod, self.capex(), self.payment_loan_price())
+        self.prod, self.perf, self.capex_prod, self.capex(), self.payment_loan_price())
         self.receitas = self.total_revenue()
         self.despesas = self.total_cost()
-        self.tma = 0.1
+
+    def __call__(self, preco=None):
+        if preco:
+            self.prod.price = preco
+        self.update_model()
+        return self.vpl()
 
     def __str__(self):
         return f'O VPL do projeto eh de $ {self.vpl():,.2f}.'
@@ -99,7 +108,7 @@ class Caixa:
         match str(self.tarefa):
             case '3':
                 capex_prod += 170e6
-        return float(capex_prod)
+        return float(capex_prod.iloc[0])
 
     def lucro_bruto(self):
         return self.receitas - self.despesas.sum(axis=1)
