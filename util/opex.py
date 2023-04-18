@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 from datetime import date
@@ -101,8 +102,8 @@ class OpexRigido:
         self.anos_restantes = self.dados['capex']['ano_fim'] - \
             self.pidr['ano_lanc']
     
-    def _quarter_index(self):
-        start_date = date(self.dados['capex']['ano_lancamento'], 12, 31)
+    def _quarter_series(self):
+        start_date = date(self.dados['capex']['ano_lancamento'], 1, 1)
         end_date = date(self.dados['capex']['ano_fim'], 12, 31)
         ano = pd.date_range(pd.to_datetime(start_date),
                             pd.to_datetime(end_date), freq='Q', name='date')
@@ -148,21 +149,23 @@ class OpexRigido:
         return self.custo_pidr() + self.custo_insp_interna()
 
     def opex_inspecao_equip(self):
-        equip = InspecEquipamentos(self.equip, self.pidr)
+        equip = InspecEquipamentos(self.equip, self._ano_inicial_opex, self.anos_restantes, self._anual_index())
         return equip.opex_inspec_anm() + equip.opex_inspec_plet()
 
     def opex_intervencao(self):
-        interv = Intervencao(self.dados, self.pidr)
+        interv = Intervencao(self.dados, self._ano_inicial_opex, self.anos_restantes, self._anual_index())
         return interv.opex()
 
     def opex_inibidores(self):
         inibidores = self._init_series()
         anos = pd.date_range(
-            self._ano_inicial_opex, periods=self.anos_restantes+1, inclusive='right', freq='1Y')
+            self._ano_inicial_opex, periods=self.anos_restantes+1, inclusive='both', freq='1Y')
         custo_por_dia = self.dados['opex']['inibidores']['custo'] * \
             self.dados['opex']['inibidores']['vazao']
         inibidores[anos] = custo_por_dia
-        inibidores.apply(lambda x: 366*x if calendar.isleap(x) else 365*x)
+        num_days = lambda x: 366 if calendar.isleap(x) else 365
+        multipl = np.array([num_days(days) for days in inibidores.index.year.values])
+        inibidores = inibidores.mul(multipl)
         return inibidores
 
     def opex(self):
@@ -189,9 +192,10 @@ class InspecEquipamentos:
 
     def opex_inspec_anm(self):
         inspec_anm = self._init_series()
+        periodicidade = self.equip['anm']['periodicidade']
         num_insp = math.floor(self.anos_restantes /
-                              self.equip['anm']['periodicidade'])
-        periodo = str(self.equip['anm']['periodicidade']) + 'Y'
+                              periodicidade)
+        periodo = str(periodicidade) + 'Y'
         anos = pd.date_range(
             self.ano_inicial_opex, periods=num_insp+1, inclusive='right', freq=periodo)
         valor_inspecao = self.equip['anm']['duracao'] * self.equip['anm']['diaria']
