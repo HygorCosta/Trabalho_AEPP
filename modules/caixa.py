@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import numpy_financial as npf
 from dateutil.relativedelta import relativedelta
-from datetime import datetime, timedelta, date
+from datetime import datetime, date
 from scipy.optimize import root
 from .perfuracao import Perfuracao
 from .producao import Producao, ProducaoTarefa01
@@ -24,32 +24,46 @@ class Caixa:
             self.dutos = Dutos('config/config_tarefa_4.yaml', tarefa)
         self.capex_prod = self.capex_producao()
         self.part_esp = PartipacaoEspecial(
-            self.prod, self.perf, self.capex_prod, self.capex())
+            self.prod, self.perf, self.capex_prod, self.capex(), self.payment_loan_sac())
         self.receitas = self.total_revenue()
         self.despesas = self.total_cost()
         self.tma = 0.1
-        self.price_vpl_null = None
-        self.__original = [self.total_revenue(
-        ), self.capex_producao(), self.total_cost()]
 
     def __str__(self):
         return f'O VPL do projeto eh de $ {self.vpl():,.2f}.'
+
+    def _start_prod_index(self):
+        index = pd.Index(pd.DatetimeIndex(self.prod.price.index).year)
+        return index.get_loc(self.perf.pocos.open[0].year)
+
+    def __init_cost_series(self):
+        ref = self.prod.prod_anual.index
+        return pd.Series(np.zeros(len(ref)), index=ref)
 
     def _group_by_year(self, valor: pd.Series, period='Y'):
         grupo = pd.Grouper(level='date', axis=0, freq=period)
         valor.index.name = 'date'
         return valor.groupby(grupo).sum()
 
-    def _restore_original(self):
-        self.receitas, self.capex_prod, self.despesas = self.__original
-        self.price_vpl_null = None
-
     def total_revenue(self):
         return self._group_by_year(self.part_esp.receita_bruta)
+    
+    def _fix_descom(self, despesas):
+        descom = np.zeros_like(despesas.descom.values)
+        valor_total = despesas.descom.sum()
+        descom[-1] = valor_total
+        return descom
+    
+    def _fix_imposto(self, despesas, pasep=0.0925):
+        impostos = despesas.imposto.values
+        impostos += pasep * self.receitas.values
+        impostos += self.part_esp.values.to_numpy()
+        return impostos
 
     def total_cost(self) -> pd.DataFrame:
         despesas = self._group_by_year(self.part_esp.despesas)
-        despesas.imposto += self.part_esp.values
+        despesas.descom = self._fix_descom(despesas)
+        despesas.imposto = self._fix_imposto(despesas)
         return despesas
 
     def _npv(self, vf, data_despesa, tma=0.1, period='Y'):
@@ -87,14 +101,6 @@ class Caixa:
                 capex_prod += 170e6
         return float(capex_prod)
 
-    def _start_prod_index(self):
-        index = pd.Index(pd.DatetimeIndex(self.prod.price.index).year)
-        return index.get_loc(self.perf.pocos.open[0].year)
-
-    def __init_cost_series(self):
-        ref = self.prod.prod_anual.index
-        return pd.Series(np.zeros(len(ref)), index=ref)
-
     def lucro_bruto(self):
         return self.receitas - self.despesas.sum(axis=1)
 
@@ -123,8 +129,7 @@ class Caixa:
 
     def payment_loan_sac(self, perc_fin=0.8, taxa=6.78/100, nparc=20):
         financ = pd.DataFrame(0, columns=[
-                              'Saldo_Devedor', 'Juros', 'Amortizacao', 'Pagamento'], index=self.__init_cost_series().index)
-        self.__perc_fin = 0.8
+                              'saldo_devedor', 'juros', 'amortizacao', 'pagamento'], index=self.__init_cost_series().index)
         pgto = 0
         saldo_dev = perc_fin * self.capex_prod
         amort = saldo_dev / nparc
@@ -141,13 +146,13 @@ class Caixa:
         capex[data_lanc] = capex_duto
         return capex
 
-    def capex(self, tma=0.1):
-        capex = self.payment_loan_sac()['Pagamento']
-        proprio_fv = (1 + tma) * (1 - self.__perc_fin) * self.capex_prod
-        capex.iloc[0] += proprio_fv
+    def capex(self, tma=0.1, parcela=0.8):
+        inv = self.payment_loan_sac().pagamento
+        proprio_fv = (1 + tma) * (1 - parcela) * self.capex_prod
+        inv.iloc[0] += proprio_fv
         if self.tarefa in ('4A', '4B'):
-            capex = self._add_capex_p16(capex)
-        return capex
+            inv = self._add_capex_p16(inv)
+        return inv
 
     def cash_flow(self):
         liquido = self.net_income_after_tax()
@@ -157,11 +162,10 @@ class Caixa:
     def discounted_cash_flow(self):
         cash_flow = self.cash_flow().reset_index()
         cash_flow.columns = ['date', 'parcelas']
-        disc_cf = cash_flow.apply(lambda x: self._npv(
-            x.parcelas, x.date + relativedelta(days=1)), axis=1)
+        disc_cf = cash_flow.apply(lambda x: npf.pv(self.tma, x.name+1, 0, -x.parcelas), axis=1)
         disc_cf.index = self.__init_cost_series().index
         disc_cf.columns = ['cash_flow_disc']
         return disc_cf
 
     def vpl(self) -> float:
-        return float(self.discounted_cash_flow().sum().iloc[0])
+        return float(self.discounted_cash_flow().sum())
