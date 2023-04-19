@@ -37,7 +37,7 @@ class Producao:
         grupo = pd.Grouper(key='date', axis=0, freq='Y')
         return self.__m3_to_bbl() * self.df.groupby(grupo).sum()
 
-    def prod_trim_em_mm3(self, fator_gas = 1017.532078):
+    def prod_trim_em_mm3(self, fator_gas = 1017.045686):
         grupo = pd.Grouper(key='date', axis=0, freq='Q')
         prod_trim = self.df.groupby(grupo).sum() / 1_000
         prod_trim['equiv_oil'] = prod_trim.oil_prod + \
@@ -114,7 +114,7 @@ class ProducaoTarefa01:
             date_prod.append(start_date + relativedelta(years=i))
         return date_prod
 
-    def _prod_year_to_quarter(self, fator_gas=1017.532078):
+    def _prod_year_to_quarter(self, fator_gas=1017.045686):
         self.prod_trim = self.prod_anual.loc[self.prod_anual.index.repeat(4)]
         self.prod_trim.index = self._quarter_index()
         self.prod_trim = self.prod_trim / (4 * 6.29 * 1000)

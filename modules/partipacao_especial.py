@@ -48,7 +48,7 @@ class PartipacaoEspecial:
     def imposto_producao(self, roy=0.1, pasep=0) -> pd.Series:
         return (roy + pasep) * self.receita_bruta
 
-    def opex_variavel(self, co=3, cwi=2, cwp=2, cg=2, fator_gas=1017.532078) -> pd.Series:
+    def opex_variavel(self, co=3, cwi=2, cwp=2, cg=2, fator_gas=1017.045686) -> pd.Series:
         oleo = co * self.prod_trim.oil_prod
         wprod = cwp * self.prod_trim.water_prod
         gas = cg * self.prod_trim.gas_prod / fator_gas
