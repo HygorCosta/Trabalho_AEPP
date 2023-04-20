@@ -64,9 +64,9 @@ class PartipacaoEspecial:
     def provisao_descomissionamento(self, taxa=0.2, duracao=20*4) -> pd.Series:
         descom = self.__init_series()
         id_prod = self.__get_start_prod_index()
-        descom.iloc[id_prod:id_prod+duracao] = taxa * self.capex_prod / duracao
+        descom.iloc[-duracao:] = taxa * self.capex_prod / duracao
         if self.tarefa in ('4A', '4B'):
-            descom.iloc[id_prod:id_prod+duracao] += self.dutos.descomissionamento() / duracao
+            descom.iloc[-duracao:] += self.dutos.descomissionamento() / duracao
         return descom
 
     def _opex_p16(self):
