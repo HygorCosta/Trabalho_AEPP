@@ -5,7 +5,7 @@ import pandas as pd
 
 class Perfuracao:
 
-    def __init__(self, tarefa, modelo='Base', dados_trabalho='config/dados_trabalho.xlsx', LDA=1_000) -> None:
+    def __init__(self, tarefa, modelo='Base', dados_trabalho='config/dados_trabalho.xlsx', LDA=1_000):
         self.tarefa = tarefa
         self.modelo = modelo
         self.LDA = LDA

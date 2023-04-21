@@ -9,7 +9,7 @@ from datetime import date
 
 class PartipacaoEspecial:
 
-    def __init__(self, prod: Producao, perf: Perfuracao, capex_prod, capex, financiamento) -> None:
+    def __init__(self, prod: Producao, perf: Perfuracao, capex_prod, capex, financiamento):
         self.tarefa = perf.tarefa
         self.prod_trim = prod.prod_trim
         self.capex_prod = capex_prod
@@ -45,10 +45,10 @@ class PartipacaoEspecial:
         rec_oleo = self.prod_trim.oil_prod * self.price * 1000 * 6.29
         return rec_oleo + self._receita_gas()
 
-    def imposto_producao(self, roy=0.1, pasep=0) -> pd.Series:
+    def imposto_producao(self, roy=0.1, pasep=0):
         return (roy + pasep) * self.receita_bruta
 
-    def opex_variavel(self, co=3, cwi=2, cwp=2, cg=2, fator_gas=1017.045686) -> pd.Series:
+    def opex_variavel(self, co=3, cwi=2, cwp=2, cg=2, fator_gas=1017.045686):
         oleo = co * self.prod_trim.oil_prod
         wprod = cwp * self.prod_trim.water_prod
         gas = cg * self.prod_trim.gas_prod / fator_gas
@@ -61,7 +61,7 @@ class PartipacaoEspecial:
         opex_fixo.iloc[id_prod:] = taxa * self.capex_prod / 4
         return opex_fixo
 
-    def provisao_descomissionamento(self, taxa=0.2, duracao=20*4) -> pd.Series:
+    def provisao_descomissionamento(self, taxa=0.2, duracao=20*4):
         descom = self.__init_series()
         id_prod = self.__get_start_prod_index()
         descom.iloc[-duracao:] = taxa * self.capex_prod / duracao
@@ -75,7 +75,7 @@ class PartipacaoEspecial:
         opex = inicia_serie + opex_16
         return opex.fillna(0)
 
-    def total_cost(self) -> pd.DataFrame:
+    def total_cost(self):
         imposto = self.imposto_producao()
         opex_var = self.opex_variavel()
         opex_fixo = self.opex_fixo()
@@ -104,7 +104,7 @@ class PartipacaoEspecial:
         depreciacao.iloc[index:index+4*periodos] += capex_linear
         return depreciacao
 
-    def depreciacao(self, taxa=0.03, duracao=20*4) -> pd.Series:
+    def depreciacao(self, taxa=0.03, duracao=20*4):
         depreciacao = self.__init_series()
         id_prod = self.__get_start_prod_index()
         depreciacao.iloc[id_prod:id_prod+duracao] = taxa * self.capex_prod / 4
@@ -123,7 +123,7 @@ class PartipacaoEspecial:
         juros = self.juros_financiamento()
         return lucro - depreciacao - juros
 
-    def _redutor(self, prod_trim) -> pd.Series:
+    def _redutor(self, prod_trim):
         redutor = 0
         aliquota = prod_trim.aliquota
         ano = prod_trim.name.year
@@ -186,7 +186,7 @@ class PartipacaoEspecial:
                     redutor = 1181.25
         return pd.Series(redutor, dtype='float64')
 
-    def _aliquota(self, prod_trim) -> pd.Series:
+    def _aliquota(self, prod_trim) :
         anos_base = self.pocos.open[0].year
         aliquota = 0
         ano = prod_trim.name.year

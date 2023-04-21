@@ -10,8 +10,8 @@ from .partipacao_especial import PartipacaoEspecial
 
 
 class Caixa:
-    def __init__(self, tarefa: str, modelo="Base", dados_producao=None):
-        self.tma = 0.1
+    def __init__(self, tarefa: str, modelo="Base", dados_producao=None, tma=0.1):
+        self.tma = tma
         self.tarefa = tarefa
         self.modelo = modelo
         self.dados_producao = dados_producao
@@ -44,9 +44,16 @@ class Caixa:
             prod = Producao(self.dados_producao, self.modelo)
         return prod
 
-    def __call__(self, preco=None):
-        if preco:
+    def __call__(self, preco=None, tma=None):
+        preco_atual = self.prod.price[self.modelo].to_numpy()
+        update_flag = False
+        if preco and not np.all(preco_atual == preco):
             self.prod.price[self.modelo] = preco
+            update_flag = True
+        elif tma and tma != self.tma:
+            self.tma = tma
+            update_flag = True
+        if update_flag:
             self.update_model()
         return self.vpl()
 
@@ -81,13 +88,13 @@ class Caixa:
         impostos += self.part_esp.values.to_numpy()
         return impostos
 
-    def total_cost(self) -> pd.DataFrame:
+    def total_cost(self):
         despesas = self._group_by_year(self.part_esp.despesas)
         despesas.descom = self._fix_descom(despesas)
         despesas.imposto = self._fix_imposto(despesas)
         return despesas
 
-    def _npv(self, vf, data_despesa, tma=0.1, period="Y"):
+    def _npv(self, vf, data_despesa, tma, period="Y"):
         comercialidade = datetime.strptime(
             str(self.perf.comercialidade), r"%Y-%m-%d %H:%M:%S"
         )
@@ -101,9 +108,13 @@ class Caixa:
         vp = vf / (1 + tma) ** time_step
         return pd.Series(vp)
 
+    def taxa_equivalente_diaria(self):
+        return (1 + self.tma) ** (1 / 365) - 1
+
     def capex_pocos(self):
+        rate = self.taxa_equivalente_diaria()
         return self.perf.pocos.apply(
-            lambda x: self._npv(x.custo, x.open, tma=0.0261158 / 100, period="d"),
+            lambda x: self._npv(x.custo, x.open, tma=rate, period="d"),
             axis=1,
         ).sum()
 
@@ -129,7 +140,7 @@ class Caixa:
     def lucro_bruto(self):
         return self.receitas - self.despesas.sum(axis=1)
 
-    def depreciacao(self, taxa=0.03, duracao=20) -> pd.Series:
+    def depreciacao(self):
         return self._group_by_year(self.part_esp.depreciacao())
 
     def valor_residual(self, taxa=0):
@@ -142,12 +153,12 @@ class Caixa:
         depreciacao = self.depreciacao()
         return bruto - depreciacao + residual
 
-    def net_profit_tax(self, ir=0.25, csll=0.09) -> pd.Series:
+    def net_profit_tax(self, ir=0.25, csll=0.09):
         lucro_liq_trib = self.net_income_before_tax()
         lucro_liq_trib[lucro_liq_trib < 0] = 0
         return (ir + csll) * lucro_liq_trib
 
-    def net_income_after_tax(self) -> pd.Series:
+    def net_income_after_tax(self):
         liq_trib = self.net_income_before_tax()
         impostos = self.net_profit_tax()
         return liq_trib - impostos
@@ -189,9 +200,9 @@ class Caixa:
         capex[data_lanc] = capex_duto
         return capex
 
-    def capex(self, tma=0.1, parcela=0.8):
+    def capex(self, parcela=0.8):
         inv = self.payment_loan_price().pagamento
-        proprio_fv = (1 + tma) * (1 - parcela) * self.capex_prod
+        proprio_fv = (1 + self.tma) * (1 - parcela) * self.capex_prod
         inv.iloc[0] += proprio_fv
         if self.tarefa in ("4A", "4B"):
             inv = self._add_capex_p16(inv)
@@ -212,5 +223,5 @@ class Caixa:
         disc_cf.columns = ["cash_flow_disc"]
         return disc_cf
 
-    def vpl(self) -> float:
+    def vpl(self):
         return float(self.discounted_cash_flow().sum())

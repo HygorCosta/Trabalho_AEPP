@@ -56,7 +56,7 @@ class Producao:
 
 class ProducaoTarefa01:
 
-    def __init__(self, dados_trabalho='config/dados_trabalho.xlsx') -> None:
+    def __init__(self, dados_trabalho='config/dados_trabalho.xlsx'):
         self.modelo = 'Up'
         self._file_name = ['Tarefa01', '.xlsx']
         self.producao = pd.DataFrame()
