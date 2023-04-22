@@ -33,7 +33,6 @@ class Perfuracao:
         fases_anteriores = self.LDA
         tempo = [0.5 * taxa * self.LDA]
         for fase, nbrocas in zip(self.dados.fases_pioneiro, self.dados.num_brocas):     
-            # O comprimento do trecho perfurado foi admitido constante.
             tempo_fase = 0
             trecho_perfurado = fase / nbrocas
             for _ in range(nbrocas):

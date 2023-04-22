@@ -11,14 +11,16 @@ from pathlib import Path
 class Producao:
 
     def __init__(self, dados_producao, modelo='Base', dados_trabalho='config/dados_trabalho.xlsx') -> None:
-        self.producao = pd.DataFrame()
-        self._file_name = os.path.basename(dados_producao)
-        self._file_name = os.path.splitext(self._file_name)
+        self._file_name = self._select_file_name(dados_producao)
         self.df = self.configurar_producao(dados_producao)
         self.price = pd.read_excel(dados_trabalho, sheet_name='Stock_Oil_Price', index_col=0, parse_dates=[
                                    'Ano'], usecols=['Ano', modelo])
         self.prod_anual = self.producao_anual_em_bbl()
         self.prod_trim = self.prod_trim_em_mm3()
+
+    def _select_file_name(self, dados_producao):
+        file = os.path.basename(dados_producao)
+        return os.path.splitext(file)
 
     def configurar_producao(self, producao_excel):
         prod = pd.read_excel(producao_excel, skiprows=range(0, 2))
@@ -43,16 +45,6 @@ class Producao:
         prod_trim['equiv_oil'] = prod_trim.oil_prod + \
             prod_trim.gas_prod / fator_gas
         return prod_trim
-
-    def write_file(self):
-        Path("resultados/").mkdir(parents=True, exist_ok=True)
-        output_name = 'resultados/' + \
-            self._file_name[0] + '_AEPP' + self._file_name[1]
-        writer = pd.ExcelWriter(output_name, engine='xlsxwriter')
-        self.prod_anual.to_excel(writer, sheet_name='Produção Anual')
-        self.prod_trim.to_excel(writer, sheet_name='Produção Trimestral')
-        writer.close()
-
 
 class ProducaoTarefa01:
 

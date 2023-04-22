@@ -22,7 +22,6 @@ class PartipacaoEspecial:
         if self.tarefa in ('4A', '4B'):
             self.dutos = Dutos('config/config_tarefa_4.yaml', self.tarefa)
         self.despesas = self.total_cost()
-        self.prod_trim['receita_liq'] = self.lucro_liquido_pe()
         self.calcular_partipacao_especial()
         self.values = self._group_by_year(self.prod_trim.part_esp)
 
@@ -63,7 +62,6 @@ class PartipacaoEspecial:
 
     def provisao_descomissionamento(self, taxa=0.2, duracao=20*4):
         descom = self.__init_series()
-        id_prod = self.__get_start_prod_index()
         descom.iloc[-duracao:] = taxa * self.capex_prod / duracao
         if self.tarefa in ('4A', '4B'):
             descom.iloc[-duracao:] += self.dutos.descomissionamento() / duracao
@@ -121,7 +119,7 @@ class PartipacaoEspecial:
         lucro = self.lucro_bruto()
         depreciacao = self.depreciacao()
         juros = self.juros_financiamento()
-        return lucro - depreciacao - juros
+        self.prod_trim['receita_liq'] = lucro - depreciacao - juros
 
     def _redutor(self, prod_trim):
         redutor = 0
@@ -255,6 +253,7 @@ class PartipacaoEspecial:
         self.prod_trim['redutor'] = redutor
 
     def calcular_partipacao_especial(self):
+        self.lucro_liquido_pe()
         self.aliquota_partipacao_especial()
         self._redutor_part_esp()
         prod_liq = self.prod_trim.equiv_oil - self.prod_trim.redutor

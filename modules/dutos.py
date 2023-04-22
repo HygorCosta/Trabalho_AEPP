@@ -6,7 +6,7 @@ from util.capex import FlowlineRigido, FlowlineFlexivel, Umbilical, GasLift, Ris
 
 class Dutos:
 
-    def __init__(self, config, tipo: str) -> None:
+    def __init__(self, config, tipo: str):
         self.dados = self.read(config)
         self.tipo = tipo  # 'A'-flexível, 'B'-rígido
         self.capex_flow, self.opex_flow = self.select_capex()
