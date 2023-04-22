@@ -47,10 +47,10 @@ class Caixa:
     def __call__(self, preco=None, tma=None):
         preco_atual = self.prod.price[self.modelo].to_numpy()
         update_flag = False
-        if preco and not np.all(preco_atual == preco):
+        if preco is not None and not np.all(preco_atual == preco):
             self.prod.price[self.modelo] = preco
             update_flag = True
-        elif tma and tma != self.tma:
+        elif tma is not None and tma != self.tma:
             self.tma = tma
             update_flag = True
         if update_flag:
@@ -224,4 +224,7 @@ class Caixa:
         return disc_cf
 
     def vpl(self):
-        return float(self.discounted_cash_flow().sum())
+        if self.tma:
+            return float(self.discounted_cash_flow().sum())
+        else:
+            return float(self.cash_flow().sum())
