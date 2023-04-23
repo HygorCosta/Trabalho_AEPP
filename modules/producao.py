@@ -34,7 +34,7 @@ class Producao:
         return self.df.groupby(self.df.index.year).agg('sum') * m3_to_bbl
 
     def prod_trim_em_mm3(self, fator_gas = 1017.045686):
-        prod_trim = self.df.groupby(pd.PeriodIndex(self.df.index, freq='Q')).agg('sum') / 1_000
+        prod_trim = self.df.groupby(pd.Grouper(freq='Q')).sum() / 1_000
         prod_trim['equiv_oil'] = prod_trim.oil_prod + \
             prod_trim.gas_prod / fator_gas
         return prod_trim
@@ -48,6 +48,7 @@ class ProducaoTarefa01:
         self.price = pd.read_excel(dados_trabalho,
                                    sheet_name='Stock_Oil_Price', index_col=0, parse_dates=['Ano'], usecols=['Ano'])
         self.price[self.modelo] = 70
+        self.price.index = self.price.index.year
         self._prod_tarefa_01_anual()
         self._prod_year_to_quarter()
 
@@ -86,10 +87,10 @@ class ProducaoTarefa01:
         return water
 
     def _quarter_index(self):
-        start_date = self.price.index[0]
-        end_date = date(self.price.index[-1].year, 12, 31)
+        start_date = date(self.price.index[0], 1, 1)
+        end_date = date(self.price.index[-1], 12, 31)
         quarters = pd.date_range(pd.to_datetime(start_date),
-                                 pd.to_datetime(end_date) + pd.offsets.QuarterBegin(1), freq='Q')
+                                 pd.to_datetime(end_date) + pd.offsets.QuarterBegin(1), freq='Q-DEC')
         return quarters
 
     def _year_index(self):
@@ -107,16 +108,14 @@ class ProducaoTarefa01:
             self.prod_trim.gas_prod / fator_gas
         
     def _day_prod_to_anual(self, prod):
-        if calendar.isleap(prod.name.year):
+        if calendar.isleap(prod.name):
             prod = prod.mul(366)
         else:
             prod = prod.mul(365)
         return prod
 
     def _prod_tarefa_01_anual(self, RGO=100):
-        self.prod_anual = pd.DataFrame(index=self._year_index())
-        self.prod_anual.index = self.prod_anual.index.astype('datetime64[ns]')
-        self.prod_anual.astype({})
+        self.prod_anual = pd.DataFrame(index=self.price.index)
         self.prod_anual['oil_prod'] = self._prod_oil_t1()
         self.prod_anual['water_prod'] = self._prod_water_t1()
         self.prod_anual['water_inj'] = self._inj_water_t1()

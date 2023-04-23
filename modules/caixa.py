@@ -112,13 +112,14 @@ class Caixa:
 
     def capex_pocos(self):
         rate = self.taxa_equivalente_diaria()
-        return self.perf.pocos.apply(
+        custo_pocos_inicias = self.perf.pocos[:29]
+        return float(custo_pocos_inicias.apply(
             lambda x: self._npv(x.custo, x.open, tma=rate, period="d"),
             axis=1,
-        ).sum()
+        ).sum())
 
     def capex_subsea(self, a=-67.871986, b=127.33084, c=0.7):
-        return (a + b * self.perf.pocos.shape[0] ** c) * 10**6
+        return (a + b * self.perf.pocos[:29].shape[0] ** c) * 10**6
 
     def capex_fpso(self, capacidade=100, a=-7878.421023, b=5426.536367, c=0.1):
         return (a + b * capacidade**c) * 10**6
@@ -134,7 +135,7 @@ class Caixa:
         match str(self.tarefa):
             case "3":
                 capex_prod += 170e6
-        return float(capex_prod.iloc[0])
+        return capex_prod
 
     def lucro_bruto(self):
         return self.receitas - self.despesas.sum(axis=1)
@@ -196,8 +197,8 @@ class Caixa:
 
     def _add_capex_p16(self, capex):
         capex_duto = self.dutos.capex()
-        data_lanc = date(self.dutos.dados["capex"]["ano_lancamento"], 12, 31)
-        capex[data_lanc] = capex_duto
+        data_lanc = date(self.dutos.dados["capex"]["ano_lancamento"], 12, 31).year
+        capex[data_lanc] = capex_duto + self.perf.pocos.custo.iloc[-1]
         return capex
 
     def capex(self, parcela=0.8):

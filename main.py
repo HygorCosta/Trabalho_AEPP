@@ -4,8 +4,8 @@ from modules.caixa import Caixa
 from modules.results import Results
 from modules.aepp import AEPP
 
-# # Tarefas 01:
-# tarefa_01 = Caixa(tarefa='1', modelo='Up')
+# Tarefas 01:
+tarefa_01 = Caixa(tarefa='1', modelo='Up')
 
 # Tarefas 02 - Down:
 tarefa_02_down = Caixa(
@@ -24,7 +24,7 @@ tarefa_02_up = Caixa(
 vpl_proj_t2 = (tarefa_02_down.vpl() +
                tarefa_02_base.vpl() + tarefa_02_up.vpl()) / 3
 
-print(f'O VPL ponderado da tarefa 02 é de {vpl_proj_t2}.')
+# print(f'O VPL ponderado da tarefa 02 é de {vpl_proj_t2}.')
 
 # Tarefa 03:
 tarefa_03 = Caixa(tarefa='3', dados_producao='producao/Pituba_Base_LS.xlsx')
