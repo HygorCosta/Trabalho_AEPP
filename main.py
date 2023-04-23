@@ -42,9 +42,3 @@ tarefas = [tarefa_01, tarefa_02_down, tarefa_02_base,
 for tarefa in tarefas:
     parametros = AEPP(tarefa).hub_indicadores_economicos()
     Results(tarefa, parametros).write_results()
-
-# TODO:
-# Gráficos: Fluxo de Caixa descontado por ano
-# Tabela com índices econômicos
-# Ganhos LS vs Base - Gerar curvas de produção
-# P16 vs Base - Curvas de produção
