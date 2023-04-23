@@ -74,12 +74,11 @@ class Caixa:
         return valor.groupby(grupo).sum()
 
     def total_revenue(self):
-        return self._group_by_year(self.part_esp.receita_bruta)
+        return self.part_esp.receita_bruta.groupby(self.part_esp.receita_bruta.index.year).sum()
 
     def _fix_descom(self, despesas):
         descom = np.zeros_like(despesas.descom.values)
-        valor_total = despesas.descom.sum()
-        descom[-1] = valor_total
+        descom[-1] = despesas.descom.sum()
         return descom
 
     def _fix_imposto(self, despesas, pasep=0.0925):
@@ -89,7 +88,7 @@ class Caixa:
         return impostos
 
     def total_cost(self):
-        despesas = self._group_by_year(self.part_esp.despesas)
+        despesas = self.part_esp.despesas.groupby(self.part_esp.despesas.index.year).sum()
         despesas.descom = self._fix_descom(despesas)
         despesas.imposto = self._fix_imposto(despesas)
         return despesas
@@ -141,7 +140,8 @@ class Caixa:
         return self.receitas - self.despesas.sum(axis=1)
 
     def depreciacao(self):
-        return self._group_by_year(self.part_esp.depreciacao())
+        depreciacao = self.part_esp.depreciacao()
+        return depreciacao.groupby(depreciacao.index.year).sum()
 
     def valor_residual(self, taxa=0):
         capex_prod = self.__init_cost_series() + self.capex_prod

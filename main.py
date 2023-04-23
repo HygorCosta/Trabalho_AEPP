@@ -4,12 +4,13 @@ from modules.caixa import Caixa
 from modules.results import Results
 from modules.aepp import AEPP
 
-# Tarefas 01:
-tarefa_01 = Caixa(tarefa='1', modelo='Up')
+# # Tarefas 01:
+# tarefa_01 = Caixa(tarefa='1', modelo='Up')
 
 # Tarefas 02 - Down:
 tarefa_02_down = Caixa(
     tarefa='2', dados_producao='producao/Pituba_Down_Mensal.xlsx', modelo='Down')
+tarefa_02_down()
 
 # Tarefas 02 - Base:
 tarefa_02_base = Caixa(

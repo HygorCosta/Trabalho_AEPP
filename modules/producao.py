@@ -23,25 +23,18 @@ class Producao:
         return os.path.splitext(file)
 
     def configurar_producao(self, producao_excel):
-        prod = pd.read_excel(producao_excel, skiprows=range(0, 2))
-        prod.columns = ['time', 'date', 'oil_prod',
-                        'water_prod', 'gas_prod', 'water_inj']
-        prod = prod.drop(['time'], axis=1)
-        data_original = prod.date[:-1]
-        prod = prod.shift(-1)[:-1]
-        prod.date = pd.to_datetime(data_original)
-        return prod
-
-    def __m3_to_bbl(self):
-        return 6.289814
-
-    def producao_anual_em_bbl(self):
-        grupo = pd.Grouper(key='date', axis=0, freq='Y')
-        return self.__m3_to_bbl() * self.df.groupby(grupo).sum()
+        colum_names = ['date', 'oil_prod', 'water_prod', 'gas_prod','water_inj']
+        return pd.read_excel(producao_excel,
+                              skiprows=range(0, 2),
+                              usecols='B:F',
+                              names=colum_names,
+                              index_col=0).shift(-1)[:-1]
+        
+    def producao_anual_em_bbl(self, m3_to_bbl=6.29):
+        return self.df.groupby(self.df.index.year).agg('sum') * m3_to_bbl
 
     def prod_trim_em_mm3(self, fator_gas = 1017.045686):
-        grupo = pd.Grouper(key='date', axis=0, freq='Q')
-        prod_trim = self.df.groupby(grupo).sum() / 1_000
+        prod_trim = self.df.groupby(pd.PeriodIndex(self.df.index, freq='Q')).agg('sum') / 1_000
         prod_trim['equiv_oil'] = prod_trim.oil_prod + \
             prod_trim.gas_prod / fator_gas
         return prod_trim
