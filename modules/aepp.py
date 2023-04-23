@@ -38,8 +38,9 @@ class AEPP:
         return (f / i) ** (1 / n) - 1
 
     def il(self):
-        receitas = self.caixa.discounted_cash_flow()[self.caixa.discounted_cash_flow() > 0].sum()
-        disp = - self.caixa.discounted_cash_flow()[self.caixa.discounted_cash_flow() < 0].sum()
+        caixa_descontado = self.caixa.discounted_cash_flow()
+        receitas = caixa_descontado[caixa_descontado > 0].sum()
+        disp = - caixa_descontado[caixa_descontado < 0].sum()
         return receitas / disp
 
     def roi(self):
