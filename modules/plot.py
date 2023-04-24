@@ -67,7 +67,7 @@ class PPlot:
 
     @property
     def disc_cash_flow(self):
-        return self.df.disc_cash_flow.rename("FLC (nominal)")
+        return self.df.disc_cash_flow.rename("FCL (nominal)")
 
     def barplot_cash_flow(self):
         df = pd.concat(
