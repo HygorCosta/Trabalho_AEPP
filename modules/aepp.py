@@ -162,5 +162,5 @@ class AEPP:
         indicadores = indicadores.stack()
         indicadores.index.names = ['zero', 'param']
         indicadores.index = indicadores.index.get_level_values('param')
-        return indicadores
+        return indicadores.rename('values')
 
