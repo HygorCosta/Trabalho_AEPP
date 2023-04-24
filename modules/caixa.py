@@ -229,3 +229,18 @@ class Caixa:
             return float(self.discounted_cash_flow().sum())
         else:
             return float(self.cash_flow().sum())
+
+    def _hub_financial(self):
+        receita = self.receitas.rename('receita')
+        despesas = self.despesas
+        lucro_bruto = self.lucro_bruto().rename('lucro_bruto')
+        deprec = self.depreciacao().rename('depreciacao')
+        residual = self.valor_residual().rename('residual')
+        lucro_trib = self.net_income_before_tax().rename('lucro_tributavel')
+        ir = self.net_profit_tax().rename('ir_csll')
+        lucro_liq = self.net_income_after_tax().rename('lucro_liquido')
+        capex = self.capex().rename('capex_prod')
+        flc = self.cash_flow().rename('cash_flow')
+        flc_disc = self.discounted_cash_flow().rename('disc_cash_flow')
+        data_frames = [receita, despesas, lucro_bruto, deprec, residual, lucro_trib, ir, lucro_liq, capex, flc, flc_disc] 
+        return pd.concat(data_frames, join='outer', axis=1)
