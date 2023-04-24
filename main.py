@@ -3,6 +3,7 @@ import pandas as pd
 from modules.caixa import Caixa
 from modules.results import Results
 from modules.aepp import AEPP
+from modules.plot import PPlot
 
 # Tarefas 01:
 tarefa_01 = Caixa(tarefa='1', modelo='Up')
@@ -42,3 +43,4 @@ tarefas = [tarefa_01, tarefa_02_down, tarefa_02_base,
 for tarefa in tarefas:
     parametros = AEPP(tarefa).hub_indicadores_economicos()
     Results(tarefa, parametros).write_results()
+    PPlot(tarefa).barplot_cash_flow()
