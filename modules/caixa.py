@@ -113,10 +113,11 @@ class Caixa:
     def capex_pocos(self):
         rate = self.taxa_equivalente_diaria()
         custo_pocos_inicias = self.perf.pocos[:29]
-        return float(custo_pocos_inicias.apply(
+        capex = custo_pocos_inicias.apply(
             lambda x: self._npv(x.custo, x.open, tma=rate, period="d"),
             axis=1,
-        ).sum())
+        ).sum()
+        return float(capex.iloc[0])
 
     def capex_subsea(self, a=-67.871986, b=127.33084, c=0.7):
         return (a + b * self.perf.pocos[:29].shape[0] ** c) * 10**6
