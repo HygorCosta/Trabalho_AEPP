@@ -44,7 +44,7 @@ class AEPP:
         return receitas / disp
 
     def roi(self):
-        return self.caixa.vpl() / self.capex_vp
+        return self.caixa.vpl() / self.caixa.capex_prod
 
     def lu(self):
         return self.caixa.vpl() / self.vp_pec
