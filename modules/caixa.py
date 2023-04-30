@@ -197,9 +197,7 @@ class Caixa:
         return financ
 
     def _add_capex_p16(self, capex):
-        capex_duto = self.dutos.capex()
-        data_lanc = date(self.dutos.dados["capex"]["ano_lancamento"], 12, 31).year
-        capex[data_lanc] = capex_duto + self.perf.pocos.custo.iloc[-1]
+        capex[self.dutos.dados["capex"]["ano_lancamento"]] = self.dutos.capex() + self.perf.pocos.custo.iloc[-1]
         return capex
 
     def capex(self, parcela=0.8):

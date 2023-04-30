@@ -37,11 +37,19 @@ class BaseFlexivel:
         custo_acessorios = self.dados['acessorios'] * num_tramos
         return custo_extensao_duto + custo_acessorios + self.dados['obras_uep']
     
-    def custo_plsv(self, comprimento, num_tramos, vel, flut=0):
+    def custo_plsv(self, comprimento, num_tramos, vel, flut=0, coleta=False):
         dias_lanc = comprimento / vel
-        dias_conexao_tramos = (num_tramos - 1) * self.plsv['conexao_tramos'] / 24
-        num_diarias = self.plsv['carga'] + dias_lanc + self.plsv['pull_in']/24 + self.plsv['cvd']/24 + dias_conexao_tramos + flut
-        num_servico = self.plsv['pull_in']/24 + self.plsv['cvd']/24 + dias_conexao_tramos + dias_lanc + flut
+        conexao_tramos = (num_tramos - 1) * self.plsv['conexao_tramos'] / 24
+        carga = self.plsv['carga']
+        pull_in = self.plsv['pull_in']/24
+        cvd = self.plsv['cvd']/24
+        if coleta == 'riser':
+            cvd = 0
+            carga = 0
+        elif coleta == 'flow':
+            pull_in = 0
+        num_diarias = carga + dias_lanc + pull_in + cvd + conexao_tramos + flut
+        num_servico = pull_in + cvd + conexao_tramos + dias_lanc + flut
         custo_diarias = num_diarias * self.plsv['diaria']
         custo_servico = num_servico* self.plsv['servico']
         return custo_diarias + custo_servico
@@ -70,7 +78,7 @@ class FlowlineFlexivel(BaseFlexivel):
         return custo_extensao_duto + custo_acessorios
     
     def _custo_plsv(self):
-        return self.custo_plsv(self._comp_total, self._num_tramos, self.plsv['vel']['coleta'])
+        return self.custo_plsv(self._comp_total, self._num_tramos, self.plsv['vel']['coleta'], coleta='flow')
         
     def _custo_pidf(self):
         return self.custo_pidf(self.pidf['duracao']['coleta']['flow'])
@@ -168,7 +176,7 @@ class Riser(BaseFlexivel):
         return  self.dados['flut'] * self.plsv['vel_flut'] / 24
     
     def _custo_plsv(self):
-        return self.custo_plsv(self._comp_total_riser, self._num_tramos_riser, self.plsv['vel']['coleta'], self.tempo_flutuadores())
+        return self.custo_plsv(self._comp_total_riser, self._num_tramos_riser, self.plsv['vel']['coleta'], self.tempo_flutuadores(), coleta='riser')
     
     def _custo_pidf(self):
         return self.custo_pidf(self.pidf['duracao']['coleta']['riser'])

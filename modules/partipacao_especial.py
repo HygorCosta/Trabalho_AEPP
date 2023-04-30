@@ -58,7 +58,10 @@ class PartipacaoEspecial:
 
     def opex_fixo(self, taxa=0.025):
         opex_fixo = pd.Series(0, index=self.prod_trim.index)
-        opex_fixo.iloc[self._p0() :] = taxa * self.capex_prod / 4
+        capex = self.capex_prod
+        if self.tarefa in ('4A', '4B'):
+            capex += 0
+        opex_fixo.iloc[self._p0() :] = taxa * capex / 4
         return opex_fixo
 
     def provisao_descomissionamento(self, taxa=0.2, duracao=20 * 4):
